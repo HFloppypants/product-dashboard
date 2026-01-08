@@ -3,36 +3,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Excel-Style Filtered Dashboard</title>
+  <title>Excel-style Filters Dashboard</title>
 
   <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
 
-  <!-- YADCF CSS for Excel-style filters -->
+  <!-- YADCF CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yadcf@0.9.4/jquery.dataTables.yadcf.css" />
+
+  <!-- Select2 CSS (required for nice dropdowns with checkboxes) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
 
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
     }
+
     table {
       width: 100%;
+    }
+
+    .yadcf-filter-wrapper {
+      margin-top: 4px;
+    }
+
+    .select2-container {
+      width: 100% !important;
     }
   </style>
 </head>
 <body>
 
-  <h2>Product Dashboard with Excel-Style Filters</h2>
+  <h2>Product Dashboard with Excel-style Filters</h2>
   <button onclick="clearFilters()">Clear All Filters</button>
+
   <table id="productTable" class="display" style="width:100%"></table>
 
-  <!-- jQuery + DataTables -->
+  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+  <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-  <!-- YADCF plugin -->
-  <script src="https://cdn.jsdelivr.net/npm/yadcf@0.9.4/jquery.dataTables.yadcf.js"></script>
+  <!-- Select2 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <!-- YADCF JS -->
+  <script src="https://cdn.jsdelivr.net/npm/yadcf@0.9.4/jquery.dataTables.yadcf.min.js"></script>
 
   <script>
     let table;
@@ -51,7 +69,7 @@
 
       const [headers, ...data] = rows;
 
-      // Build table structure
+      // Build table header and body
       const thead = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
       const tbody = '<tbody>' + data.map(row =>
         `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
@@ -59,6 +77,7 @@
 
       document.getElementById('productTable').innerHTML = thead + tbody;
 
+      // Initialize DataTable
       table = $('#productTable').DataTable({
         paging: true,
         searching: true,
@@ -67,22 +86,29 @@
         pageLength: 25
       });
 
-      // Apply YADCF filters on specific columns
-      yadcf.init(table, [
-        {
-          column_number: 0, // e.g. Region
-          filter_type: 'multi_select',
-          select_type: 'select2', // optional: fancier dropdowns
-          filter_default_label: "Select Region"
-        },
-        {
-          column_number: 1, // e.g. Make
-          filter_type: 'multi_select',
-          select_type: 'select2',
-          filter_default_label: "Select Make"
-        },
-        // Add more filters like this for other columns if needed
-      ]);
+      // Wait a moment before applying filters
+      setTimeout(() => {
+        yadcf.init(table, [
+          {
+            column_number: 0, // Region
+            filter_type: 'multi_select',
+            select_type: 'select2',
+            filter_default_label: 'Filter Region'
+          },
+          {
+            column_number: 1, // Make
+            filter_type: 'multi_select',
+            select_type: 'select2',
+            filter_default_label: 'Filter Make'
+          },
+          {
+            column_number: 2, // Example: Model or Type
+            filter_type: 'multi_select',
+            select_type: 'select2',
+            filter_default_label: 'Filter Type'
+          }
+        ]);
+      }, 200); // wait for DataTable to render fully
     }
 
     function clearFilters() {
