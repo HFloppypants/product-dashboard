@@ -51,7 +51,36 @@ async function loadData() {
   });
 }
 
+async function loadData() {
+  const response = await fetch(
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
+  );
+  const csvText = await response.text();
+
+  console.log("Raw CSV Text:", csvText); // 👈 Log the CSV itself
+
+  const rows = csvText
+    .trim()
+    .split('\n')
+    .map(row => row.split(','))
+    .filter(row => row.length > 1);
+
+  const [headers, ...data] = rows;
+
+  console.log("Headers:", headers);
+  console.log("First 5 Rows:", data.slice(0, 5)); // 👈 Show parsed data
+
+  $('#productTable').DataTable({
+    data: data,
+    columns: headers.map(h => ({ title: h })),
+    paging: true,
+    searching: true,
+    scrollX: true
+  });
+}
+
 loadData();
+
 </script>
 
 </body>
