@@ -19,7 +19,12 @@
     async function loadData() {
       const response = await fetch('https://docs.google.com/spreadsheets/d/1TDrQezM_QvG3mABmTPXRLIizvjfGpIu-mKT7QUXM6qU/edit?usp=sharing');
       const csvText = await response.text();
-      const rows = csvText.trim().split('\n').map(row => row.split(','));
+      const rows = csvText
+        .trim()
+        .split('\n')
+        .map(row => row.split(','))
+        .filter(row => row.length > 1); // skips blank/short rows
+
       const [headers, ...data] = rows;
 
       $('#productTable').DataTable({
