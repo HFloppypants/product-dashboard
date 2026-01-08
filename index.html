@@ -22,53 +22,38 @@
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-  <script>
-    async function loadData() {
-      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv');
-      const csvText = await response.text();
-
-      const rows = csvText
-        .trim()
-        .split('\n')
-        .map(row => row.split(','))
-        .filter(row => row.length > 1); // Filters out blank rows
-
-      const [headers, ...data] = rows;
-
-      $('#productTable').DataTable({
-        data: data,
-        columns: headers.map(header => ({ title: header })),
-        paging: true,
-        searching: true,
-        scrollX: true
-      });
-    }
-
+<script>
 async function loadData() {
-  const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pubhtml');
+  const response = await fetch(
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
+  );
+
   const csvText = await response.text();
 
   const rows = csvText
     .trim()
     .split('\n')
     .map(row => row.split(','))
-    .filter(row => row.length > 1); // Skip empty/invalid rows
+    .filter(row => row.length > 1);
 
   const [headers, ...data] = rows;
 
-  console.log('Header length:', headers.length);
-  console.log('Example row lengths:', data.slice(0, 5).map(row => row.length));
+  console.log('Header count:', headers.length);
+  console.log('Row lengths:', data.slice(0, 5).map(r => r.length));
 
   $('#productTable').DataTable({
     data: data,
     columns: headers.map(h => ({ title: h })),
     paging: true,
     searching: true,
-    scrollX: true
+    scrollX: true,
+    destroy: true
   });
 }
 
-  </script>
+loadData();
+</script>
+
 </body>
 </html>
 
