@@ -2,9 +2,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Infotainment Feature Matrix</title>
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <meta charset="UTF-8" />
+  <title>Excel-Style Filtered Dashboard</title>
+
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+
+  <!-- YADCF CSS for Excel-style filters -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yadcf@0.9.4/jquery.dataTables.yadcf.css" />
 
   <style>
     body {
@@ -14,21 +19,24 @@
     table {
       width: 100%;
     }
-    thead select {
-      width: 100%;
-      font-size: 12px;
-      margin-top: 4px;
-    }
   </style>
 </head>
 <body>
-  <h2>UDS Infotainment Feature Matrix</h2>
+
+  <h2>Product Dashboard with Excel-Style Filters</h2>
+  <button onclick="clearFilters()">Clear All Filters</button>
   <table id="productTable" class="display" style="width:100%"></table>
 
+  <!-- jQuery + DataTables -->
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
+  <!-- YADCF plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/yadcf@0.9.4/jquery.dataTables.yadcf.js"></script>
+
   <script>
+    let table;
+
     async function loadData() {
       const response = await fetch(
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
@@ -43,58 +51,46 @@
 
       const [headers, ...data] = rows;
 
-      // Build thead and tbody HTML manually
-      let thead = '<thead><tr>';
-      headers.forEach(h => {
-        thead += `<th>${h}</th>`;
-      });
-      thead += '</tr></thead>';
-
-      let tbody = '<tbody>';
-      data.forEach(row => {
-        tbody += '<tr>';
-        row.forEach(cell => {
-          tbody += `<td>${cell}</td>`;
-        });
-        tbody += '</tr>';
-      });
-      tbody += '</tbody>';
+      // Build table structure
+      const thead = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
+      const tbody = '<tbody>' + data.map(row =>
+        `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
+      ).join('') + '</tbody>';
 
       document.getElementById('productTable').innerHTML = thead + tbody;
 
-      // Now initialize DataTable
-      const table = $('#productTable').DataTable({
+      table = $('#productTable').DataTable({
         paging: true,
         searching: true,
         scrollX: true,
-        pageLength: 25,
         destroy: true,
-        initComplete: function () {
-          // Add dropdown filters to each header
-          this.api().columns().every(function () {
-            const column = this;
-            const select = $('<select><option value="">All</option></select>')
-              .appendTo($(column.header()).empty())
-              .on('change', function () {
-                const val = $.fn.dataTable.util.escapeRegex($(this).val());
-                column.search(val ? '^' + val + '$' : '', true, false).draw();
-              });
-
-            column
-              .data()
-              .unique()
-              .sort()
-              .each(function (d) {
-                if (d) {
-                  select.append(`<option value="${d}">${d}</option>`);
-                }
-              });
-          });
-        }
+        pageLength: 25
       });
+
+      // Apply YADCF filters on specific columns
+      yadcf.init(table, [
+        {
+          column_number: 0, // e.g. Region
+          filter_type: 'multi_select',
+          select_type: 'select2', // optional: fancier dropdowns
+          filter_default_label: "Select Region"
+        },
+        {
+          column_number: 1, // e.g. Make
+          filter_type: 'multi_select',
+          select_type: 'select2',
+          filter_default_label: "Select Make"
+        },
+        // Add more filters like this for other columns if needed
+      ]);
+    }
+
+    function clearFilters() {
+      yadcf.exResetAllFilters(table);
     }
 
     loadData();
   </script>
+
 </body>
 </html>
