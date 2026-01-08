@@ -2,86 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Product Dashboard</title>
+  <title>Infotainment Feature Matrix</title>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
-      background: #ffffff;
     }
     table {
       width: 100%;
     }
+    thead select {
+      width: 100%;
+      font-size: 12px;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
-  <h2>Infotainment Feature Audit</h2>
-  <table id="productTable" class="display"></table>
+  <h2>UDS Infotainment Feature Matrix</h2>
+  <table id="productTable" class="display" style="width:100%"></table>
 
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-<script>
-async function loadData() {
-  const response = await fetch(
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
-  );
+  <script>
+    async function loadData() {
+      const response = await fetch(
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
+      );
+      const csvText = await response.text();
 
-  const csvText = await response.text();
+      const rows = csvText
+        .trim()
+        .split('\n')
+        .map(row => row.split(','))
+        .filter(row => row.length > 1);
 
-  const rows = csvText
-    .trim()
-    .split('\n')
-    .map(row => row.split(','))
-    .filter(row => row.length > 1);
+      const [headers, ...data] = rows;
 
-  const [headers, ...data] = rows;
+      // Build thead and tbody HTML manually
+      let thead = '<thead><tr>';
+      headers.forEach(h => {
+        thead += `<th>${h}</th>`;
+      });
+      thead += '</tr></thead>';
 
-  console.log('Header count:', headers.length);
-  console.log('Row lengths:', data.slice(0, 5).map(r => r.length));
+      let tbody = '<tbody>';
+      data.forEach(row => {
+        tbody += '<tr>';
+        row.forEach(cell => {
+          tbody += `<td>${cell}</td>`;
+        });
+        tbody += '</tr>';
+      });
+      tbody += '</tbody>';
 
-  $('#productTable').DataTable({
-    data: data,
-    columns: headers.map(h => ({ title: h })),
-    paging: true,
-    searching: true,
-    scrollX: true,
-    destroy: true
-  });
-}
+      document.getElementById('productTable').innerHTML = thead + tbody;
 
-async function loadData() {
-  const response = await fetch(
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
-  );
-  const csvText = await response.text();
+      // Now initialize DataTable
+      const table = $('#productTable').DataTable({
+        paging: true,
+        searching: true,
+        scrollX: true,
+        pageLength: 25,
+        destroy: true,
+        initComplete: function () {
+          // Add dropdown filters to each header
+          this.api().columns().every(function () {
+            const column = this;
+            const select = $('<select><option value="">All</option></select>')
+              .appendTo($(column.header()).empty())
+              .on('change', function () {
+                const val = $.fn.dataTable.util.escapeRegex($(this).val());
+                column.search(val ? '^' + val + '$' : '', true, false).draw();
+              });
 
-  console.log("Raw CSV Text:", csvText); // 👈 Log the CSV itself
+            column
+              .data()
+              .unique()
+              .sort()
+              .each(function (d) {
+                if (d) {
+                  select.append(`<option value="${d}">${d}</option>`);
+                }
+              });
+          });
+        }
+      });
+    }
 
-  const rows = csvText
-    .trim()
-    .split('\n')
-    .map(row => row.split(','))
-    .filter(row => row.length > 1);
-
-  const [headers, ...data] = rows;
-
-  console.log("Headers:", headers);
-  console.log("First 5 Rows:", data.slice(0, 5)); // 👈 Show parsed data
-
-  $('#productTable').DataTable({
-    data: data,
-    columns: headers.map(h => ({ title: h })),
-    paging: true,
-    searching: true,
-    scrollX: true
-  });
-}
-
-loadData();
-
-</script>
-
+    loadData();
+  </script>
 </body>
 </html>
