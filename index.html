@@ -3,14 +3,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Product Dashboard</title>
+  <title>Feature Audits</title>
 
-  <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
-
-  <!-- noUiSlider CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css" />
-
   <style>
     body {
       font-family: sans-serif;
@@ -19,14 +14,13 @@
 
     .filters {
       display: flex;
-      flex-wrap: wrap;
       gap: 20px;
       margin-bottom: 20px;
     }
 
     .dropdown-filter {
       position: relative;
-      width: 220px;
+      width: 250px;
     }
 
     .dropdown-btn {
@@ -51,24 +45,21 @@
       padding: 10px;
     }
 
-    .dropdown-filter.open .dropdown-content {
-      display: block;
+    .dropdown-content input[type="text"] {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
     }
 
-    .checkbox-list label {
+    .dropdown-content label {
       display: block;
       margin-bottom: 4px;
+      cursor: pointer;
     }
 
-    .slider-inputs {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .slider-inputs input {
-      width: 50%;
-      padding: 4px;
+    .dropdown-filter.open .dropdown-content {
+      display: block;
     }
 
     table {
@@ -76,118 +67,75 @@
     }
 
     button {
-      height: 40px;
+      margin-left: auto;
     }
   </style>
 </head>
 <body>
 
-  <h2>UDS Infotainment Feature Audit (Sliders and Multiselect Filters)</h2>
+  <h2>Feature Audit with Dropdown Checkbox Filtering</h2>
 
   <div class="filters">
-    <!-- Region Filter -->
-    <div class="dropdown-filter" id="regionFilter">
+    <div id="regionFilter" class="dropdown-filter">
       <div class="dropdown-btn">Filter by Region</div>
       <div class="dropdown-content">
-        <input type="text" placeholder="Search..." onkeyup="filterCheckboxList(this)" />
+        <input type="text" placeholder="Search Region..." onkeyup="filterCheckboxList(this)">
         <label><input type="checkbox" class="select-all" checked> Select All</label>
         <div class="checkbox-list"></div>
       </div>
     </div>
 
-    <!-- Make Filter -->
-    <div class="dropdown-filter" id="makeFilter">
+    <div id="makeFilter" class="dropdown-filter">
       <div class="dropdown-btn">Filter by Make</div>
       <div class="dropdown-content">
-        <input type="text" placeholder="Search..." onkeyup="filterCheckboxList(this)" />
+        <input type="text" placeholder="Search Make..." onkeyup="filterCheckboxList(this)">
         <label><input type="checkbox" class="select-all" checked> Select All</label>
         <div class="checkbox-list"></div>
-      </div>
-    </div>
-
-    <!-- Slider Filters -->
-    <div class="dropdown-filter" id="slider-8">
-      <div class="dropdown-btn">Filter Column I</div>
-      <div class="dropdown-content">
-        <div id="slider-range-8"></div>
-        <div class="slider-inputs">
-          <input type="number" id="min-8">
-          <input type="number" id="max-8">
-        </div>
-      </div>
-    </div>
-
-    <div class="dropdown-filter" id="slider-10">
-      <div class="dropdown-btn">Filter Column K</div>
-      <div class="dropdown-content">
-        <div id="slider-range-10"></div>
-        <div class="slider-inputs">
-          <input type="number" id="min-10">
-          <input type="number" id="max-10">
-        </div>
-      </div>
-    </div>
-
-    <div class="dropdown-filter" id="slider-12">
-      <div class="dropdown-btn">Filter Column M</div>
-      <div class="dropdown-content">
-        <div id="slider-range-12"></div>
-        <div class="slider-inputs">
-          <input type="number" id="min-12">
-          <input type="number" id="max-12">
-        </div>
-      </div>
-    </div>
-
-    <div class="dropdown-filter" id="slider-14">
-      <div class="dropdown-btn">Filter Column O</div>
-      <div class="dropdown-content">
-        <div id="slider-range-14"></div>
-        <div class="slider-inputs">
-          <input type="number" id="min-14">
-          <input type="number" id="max-14">
-        </div>
       </div>
     </div>
 
     <button onclick="clearAllFilters()">Clear All</button>
   </div>
 
-  <table id="productTable" class="display"></table>
+  <table id="productTable" class="display" style="width:100%"></table>
 
-  <!-- JS Libraries -->
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/distribute/nouislider.min.js"></script>
 
   <script>
     let table;
 
     async function loadData() {
-      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv');
+      const response = await fetch(
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
+      );
       const csvText = await response.text();
 
-      const rows = csvText.trim().split('\n').map(row => row.split(',')).filter(row => row.length > 1);
+      const rows = csvText
+        .trim()
+        .split('\n')
+        .map(row => row.split(','))
+        .filter(row => row.length > 1);
+
       const [headers, ...data] = rows;
 
       const thead = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
-      const tbody = '<tbody>' + data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('') + '</tbody>';
+      const tbody = '<tbody>' + data.map(row =>
+        `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
+      ).join('') + '</tbody>';
 
       document.getElementById('productTable').innerHTML = thead + tbody;
 
       table = $('#productTable').DataTable({
         paging: true,
         searching: true,
-        scrollX: true
+        scrollX: true,
+        destroy: true,
+        pageLength: 25
       });
 
-      createDropdownCheckboxes(0, 'regionFilter');
-      createDropdownCheckboxes(1, 'makeFilter');
-
-      createSliderFilter(8);
-      createSliderFilter(10);
-      createSliderFilter(12);
-      createSliderFilter(14);
+      createDropdownCheckboxes(0, 'regionFilter'); // Region
+      createDropdownCheckboxes(1, 'makeFilter');   // Make
     }
 
     function createDropdownCheckboxes(colIndex, containerId) {
@@ -195,17 +143,20 @@
       const container = document.querySelector(`#${containerId} .checkbox-list`);
       const values = column.data().unique().sort().toArray();
 
-      container.innerHTML = '';
+      container.innerHTML = ''; // Clear
+
       values.forEach(val => {
         const label = document.createElement('label');
         label.innerHTML = `<input type="checkbox" class="filter-option" value="${val}" checked> ${val}`;
         container.appendChild(label);
       });
 
-      container.querySelectorAll('input').forEach(input => {
-        input.addEventListener('change', applyFilters);
+      // Handle filtering
+      document.querySelectorAll(`#${containerId} input`).forEach(input => {
+        input.addEventListener('change', () => applyFilters());
       });
 
+      // Select All logic
       const selectAll = document.querySelector(`#${containerId} .select-all`);
       selectAll.addEventListener('change', function () {
         const allOptions = container.querySelectorAll('input[type=checkbox]');
@@ -214,58 +165,12 @@
       });
     }
 
-    function createSliderFilter(colIndex) {
-      const columnData = table.column(colIndex).data().map(Number).filter(val => !isNaN(val));
-      const min = Math.min(...columnData);
-      const max = Math.max(...columnData);
-
-      const slider = document.getElementById(`slider-range-${colIndex}`);
-      const inputMin = document.getElementById(`min-${colIndex}`);
-      const inputMax = document.getElementById(`max-${colIndex}`);
-
-      noUiSlider.create(slider, {
-        start: [min, max],
-        connect: true,
-        range: { min, max },
-        tooltips: true,
-        step: 1
-      });
-
-      slider.noUiSlider.on('update', function (values) {
-        inputMin.value = Math.floor(values[0]);
-        inputMax.value = Math.ceil(values[1]);
-        applyFilters();
-      });
-
-      inputMin.addEventListener('change', () => {
-        slider.noUiSlider.set([inputMin.value, null]);
-      });
-
-      inputMax.addEventListener('change', () => {
-        slider.noUiSlider.set([null, inputMax.value]);
-      });
-    }
-
     function applyFilters() {
-      // Clear existing custom filters
-      $.fn.dataTable.ext.search = [];
-
-      // Checkbox filters
-      [['regionFilter', 0], ['makeFilter', 1]].forEach(([id, index]) => {
+      ['regionFilter', 'makeFilter'].forEach((id, index) => {
         const checkedVals = Array.from(document.querySelectorAll(`#${id} .filter-option:checked`))
           .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
+
         table.column(index).search(checkedVals.length ? checkedVals.join('|') : '', true, false);
-      });
-
-      // Slider filters
-      [8, 10, 12, 14].forEach(colIndex => {
-        const minVal = parseFloat(document.getElementById(`min-${colIndex}`).value);
-        const maxVal = parseFloat(document.getElementById(`max-${colIndex}`).value);
-
-        $.fn.dataTable.ext.search.push(function (settings, data) {
-          const value = parseFloat(data[colIndex]);
-          return !isNaN(value) && value >= minVal && value <= maxVal;
-        });
       });
 
       table.draw();
@@ -274,34 +179,41 @@
     function clearAllFilters() {
       document.querySelectorAll('.filter-option').forEach(cb => cb.checked = true);
       document.querySelectorAll('.select-all').forEach(cb => cb.checked = true);
-      [8, 10, 12, 14].forEach(colIndex => {
-        const slider = document.getElementById(`slider-range-${colIndex}`);
-        slider.noUiSlider.reset();
-      });
       applyFilters();
     }
 
     function filterCheckboxList(input) {
       const filter = input.value.toLowerCase();
       const list = input.closest('.dropdown-content').querySelectorAll('.checkbox-list label');
+
       list.forEach(label => {
         const text = label.textContent.toLowerCase();
         label.style.display = text.includes(filter) ? '' : 'none';
       });
     }
 
-    // Toggle dropdowns open/close
-    document.addEventListener('click', function (e) {
-      document.querySelectorAll('.dropdown-filter').forEach(el => {
-        if (!el.contains(e.target)) el.classList.remove('open');
+    // Dropdown open/close
+    document.querySelectorAll('.dropdown-filter .dropdown-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const dropdown = this.parentElement;
+        dropdown.classList.toggle('open');
+
+        // Close others
+        document.querySelectorAll('.dropdown-filter').forEach(el => {
+          if (el !== dropdown) el.classList.remove('open');
+        });
       });
-      if (e.target.closest('.dropdown-btn')) {
-        const parent = e.target.closest('.dropdown-filter');
-        parent.classList.toggle('open');
+    });
+
+    // Close dropdowns if clicking outside
+    window.addEventListener('click', function (e) {
+      if (!e.target.closest('.dropdown-filter')) {
+        document.querySelectorAll('.dropdown-filter').forEach(el => el.classList.remove('open'));
       }
     });
 
     loadData();
   </script>
+
 </body>
 </html>
