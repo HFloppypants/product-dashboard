@@ -41,14 +41,35 @@ async function loadData() {
   console.log('Header count:', headers.length);
   console.log('Row lengths:', data.slice(0, 5).map(r => r.length));
 
-  $('#productTable').DataTable({
-    data: data,
-    columns: headers.map(h => ({ title: h })),
-    paging: true,
-    searching: true,
-    scrollX: true,
-    destroy: true
-  });
+const table = $('#productTable').DataTable({
+  data: data,
+  columns: headers.map(h => ({ title: h })),
+  paging: true,
+  searching: true,
+  scrollX: true,
+  initComplete: function () {
+    // Loop through each column
+    this.api().columns().every(function () {
+      const column = this;
+      const select = $('<select><option value="">Filter</option></select>')
+        .appendTo($(column.header()).empty())
+        .on('change', function () {
+          const val = $.fn.dataTable.util.escapeRegex($(this).val());
+          column.search(val ? '^' + val + '$' : '', true, false).draw();
+        });
+
+      // Get unique values in this column
+      column
+        .data()
+        .unique()
+        .sort()
+        .each(function (d) {
+          select.append('<option value="' + d + '">' + d + '</option>');
+        });
+    });
+  }
+});
+
 }
 
 async function loadData() {
