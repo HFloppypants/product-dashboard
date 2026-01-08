@@ -3,9 +3,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Feature Matrix with Checkbox Filters</title>
+  <title>Feature Audit</title>
 
+  <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+
+  <!-- Choices.js CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+
   <style>
     body {
       font-family: sans-serif;
@@ -17,55 +22,52 @@
       padding: 15px;
       border: 1px solid #ccc;
       margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
     }
 
     .filter-group {
-      margin-bottom: 15px;
+      flex: 1 1 300px;
     }
 
-    .filter-group label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 5px;
+    table {
+      width: 100%;
     }
 
-    .filter-group .checkboxes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .filter-group .checkboxes label {
-      font-weight: normal;
-    }
-
-    .filter-group .checkboxes input {
-      margin-right: 5px;
-    }
-
-    button {
-      margin-top: 10px;
+    .choices__list--dropdown .choices__item {
+      white-space: nowrap;
     }
   </style>
 </head>
 <body>
 
-  <h2>UDS Infotainment Feature Audit</h2>
+  <h2>UDS Infotainment Feature Audit - Dropdown Checkbox Filters</h2>
 
   <div class="filters">
-    <div id="filter-region" class="filter-group"></div>
-    <div id="filter-make" class="filter-group"></div>
-    <!-- Add more filters here if needed -->
+    <div class="filter-group">
+      <label for="regionFilter">Region</label>
+      <select id="regionFilter" multiple></select>
+    </div>
+    <div class="filter-group">
+      <label for="makeFilter">Make</label>
+      <select id="makeFilter" multiple></select>
+    </div>
     <button onclick="clearAllFilters()">Clear All Filters</button>
   </div>
 
   <table id="productTable" class="display" style="width:100%"></table>
 
+  <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
+  <!-- Choices.js -->
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
   <script>
     let table;
+    let choicesInstances = {};
 
     async function loadData() {
       const response = await fetch(
@@ -81,7 +83,6 @@
 
       const [headers, ...data] = rows;
 
-      // Build table HTML
       const thead = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
       const tbody = '<tbody>' + data.map(row =>
         `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
@@ -89,7 +90,6 @@
 
       document.getElementById('productTable').innerHTML = thead + tbody;
 
-      // Initialize DataTable
       table = $('#productTable').DataTable({
         paging: true,
         searching: true,
@@ -98,58 +98,58 @@
         pageLength: 25
       });
 
-      // Setup filters for Region (col 0) and Make (col 1)
-      createCheckboxFilter(0, 'Region', 'filter-region');
-      createCheckboxFilter(1, 'Make', 'filter-make');
+      // Setup dropdown filters
+      createDropdownFilter(0, 'regionFilter');
+      createDropdownFilter(1, 'makeFilter');
     }
 
-    function createCheckboxFilter(colIndex, label, containerId) {
+    function createDropdownFilter(colIndex, selectId) {
       const column = table.column(colIndex);
-      const values = column.data().unique().sort();
+      const uniqueValues = column.data().unique().sort().toArray();
 
-      const container = document.getElementById(containerId);
-      container.innerHTML = `<label>${label}</label><div class="checkboxes"></div>`;
-      const checkboxArea = container.querySelector('.checkboxes');
+      const selectEl = document.getElementById(selectId);
+      selectEl.innerHTML = ''; // clear existing
 
-      // Add "Select All"
-      const allId = `${containerId}-all`;
-      const allWrapper = document.createElement('div');
-      allWrapper.innerHTML = `<label><input type="checkbox" id="${allId}" checked> Select All</label>`;
-      checkboxArea.appendChild(allWrapper);
-
-      // Add checkboxes for each unique value
-      values.each(val => {
-        const safeVal = val.replace(/"/g, '&quot;');
-        const optionId = `${containerId}-${safeVal}`;
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = `<label><input type="checkbox" class="${containerId}-option" value="${safeVal}" checked> ${val}</label>`;
-        checkboxArea.appendChild(wrapper);
+      uniqueValues.forEach(val => {
+        const option = document.createElement('option');
+        option.value = val;
+        option.text = val;
+        option.selected = true;
+        selectEl.appendChild(option);
       });
 
-      // Handle filtering
-      $(`#${containerId} input[type="checkbox"]`).on('change', () => applyFilters());
+      const choices = new Choices(selectEl, {
+        removeItemButton: true,
+        searchEnabled: true,
+        shouldSort: true,
+        position: 'bottom',
+        placeholder: true
+      });
+
+      choicesInstances[selectId] = choices;
+
+      selectEl.addEventListener('change', () => {
+        applyFilters();
+      });
     }
 
     function applyFilters() {
       // Region
-      const regionValues = getCheckedValues('filter-region-option');
-      table.column(0).search(regionValues.length ? regionValues.join('|') : '', true, false);
+      const regionChoices = choicesInstances['regionFilter'].getValue(true); // array of values
+      table.column(0).search(regionChoices.length ? regionChoices.join('|') : '', true, false);
 
       // Make
-      const makeValues = getCheckedValues('filter-make-option');
-      table.column(1).search(makeValues.length ? makeValues.join('|') : '', true, false);
+      const makeChoices = choicesInstances['makeFilter'].getValue(true);
+      table.column(1).search(makeChoices.length ? makeChoices.join('|') : '', true, false);
 
       table.draw();
     }
 
-    function getCheckedValues(className) {
-      return $(`.${className}:checked`).map(function () {
-        return $.fn.dataTable.util.escapeRegex($(this).val());
-      }).get();
-    }
-
     function clearAllFilters() {
-      $('.filters input[type=checkbox]').prop('checked', true);
+      Object.values(choicesInstances).forEach(instance => {
+        instance.removeActiveItems();
+        instance.setChoiceByValue([]); // clear selection
+      });
       applyFilters();
     }
 
