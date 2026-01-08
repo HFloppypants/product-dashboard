@@ -3,54 +3,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Excel-style Filters Dashboard</title>
+  <title>Feature Matrix with Checkbox Filters</title>
 
-  <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
-
-  <!-- YADCF CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yadcf@0.9.4/jquery.dataTables.yadcf.css" />
-
-  <!-- Select2 CSS (required for nice dropdowns with checkboxes) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
-
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
     }
 
-    table {
-      width: 100%;
+    .filters {
+      background: #f1f1f1;
+      padding: 15px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
     }
 
-    .yadcf-filter-wrapper {
-      margin-top: 4px;
+    .filter-group {
+      margin-bottom: 15px;
     }
 
-    .select2-container {
-      width: 100% !important;
+    .filter-group label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .filter-group .checkboxes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .filter-group .checkboxes label {
+      font-weight: normal;
+    }
+
+    .filter-group .checkboxes input {
+      margin-right: 5px;
+    }
+
+    button {
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <h2>Product Dashboard with Excel-style Filters</h2>
-  <button onclick="clearFilters()">Clear All Filters</button>
+  <h2>UDS Infotainment Feature Audit</h2>
+
+  <div class="filters">
+    <div id="filter-region" class="filter-group"></div>
+    <div id="filter-make" class="filter-group"></div>
+    <!-- Add more filters here if needed -->
+    <button onclick="clearAllFilters()">Clear All Filters</button>
+  </div>
 
   <table id="productTable" class="display" style="width:100%"></table>
 
-  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-
-  <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-
-  <!-- Select2 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-  <!-- YADCF JS -->
-  <script src="https://cdn.jsdelivr.net/npm/yadcf@0.9.4/jquery.dataTables.yadcf.min.js"></script>
 
   <script>
     let table;
@@ -69,7 +81,7 @@
 
       const [headers, ...data] = rows;
 
-      // Build table header and body
+      // Build table HTML
       const thead = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
       const tbody = '<tbody>' + data.map(row =>
         `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
@@ -86,33 +98,59 @@
         pageLength: 25
       });
 
-      // Wait a moment before applying filters
-      setTimeout(() => {
-        yadcf.init(table, [
-          {
-            column_number: 0, // Region
-            filter_type: 'multi_select',
-            select_type: 'select2',
-            filter_default_label: 'Filter Region'
-          },
-          {
-            column_number: 1, // Make
-            filter_type: 'multi_select',
-            select_type: 'select2',
-            filter_default_label: 'Filter Make'
-          },
-          {
-            column_number: 2, // Example: Model or Type
-            filter_type: 'multi_select',
-            select_type: 'select2',
-            filter_default_label: 'Filter Type'
-          }
-        ]);
-      }, 200); // wait for DataTable to render fully
+      // Setup filters for Region (col 0) and Make (col 1)
+      createCheckboxFilter(0, 'Region', 'filter-region');
+      createCheckboxFilter(1, 'Make', 'filter-make');
     }
 
-    function clearFilters() {
-      yadcf.exResetAllFilters(table);
+    function createCheckboxFilter(colIndex, label, containerId) {
+      const column = table.column(colIndex);
+      const values = column.data().unique().sort();
+
+      const container = document.getElementById(containerId);
+      container.innerHTML = `<label>${label}</label><div class="checkboxes"></div>`;
+      const checkboxArea = container.querySelector('.checkboxes');
+
+      // Add "Select All"
+      const allId = `${containerId}-all`;
+      const allWrapper = document.createElement('div');
+      allWrapper.innerHTML = `<label><input type="checkbox" id="${allId}" checked> Select All</label>`;
+      checkboxArea.appendChild(allWrapper);
+
+      // Add checkboxes for each unique value
+      values.each(val => {
+        const safeVal = val.replace(/"/g, '&quot;');
+        const optionId = `${containerId}-${safeVal}`;
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<label><input type="checkbox" class="${containerId}-option" value="${safeVal}" checked> ${val}</label>`;
+        checkboxArea.appendChild(wrapper);
+      });
+
+      // Handle filtering
+      $(`#${containerId} input[type="checkbox"]`).on('change', () => applyFilters());
+    }
+
+    function applyFilters() {
+      // Region
+      const regionValues = getCheckedValues('filter-region-option');
+      table.column(0).search(regionValues.length ? regionValues.join('|') : '', true, false);
+
+      // Make
+      const makeValues = getCheckedValues('filter-make-option');
+      table.column(1).search(makeValues.length ? makeValues.join('|') : '', true, false);
+
+      table.draw();
+    }
+
+    function getCheckedValues(className) {
+      return $(`.${className}:checked`).map(function () {
+        return $.fn.dataTable.util.escapeRegex($(this).val());
+      }).get();
+    }
+
+    function clearAllFilters() {
+      $('.filters input[type=checkbox]').prop('checked', true);
+      applyFilters();
     }
 
     loadData();
