@@ -2,108 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Product Dashboard</title>
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <title>Interactive Product Dashboard</title>
+
+  <!-- DataTables CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"
+  >
+
   <style>
     body {
-      font-family: sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       padding: 20px;
       background: #ffffff;
     }
+
     table {
       width: 100%;
+    }
+
+    thead th {
+      position: relative;
+    }
+
+    thead select {
+      width: 100%;
+      margin-top: 4px;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
-  <h2>Interactive Product Dashboard</h2>
-  <table id="productTable" class="display"></table>
 
+  <h2>Interactive Product Dashboard</h2>
+
+  <table id="productTable" class="display">
+    <thead>
+      <tr id="header-row"></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+  <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-<script>
-async function loadData() {
-  const response = await fetch(
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
-  );
+  <script>
+    async function loadData() {
+      const csvUrl =
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv';
 
-  const csvText = await response.text();
-
-  const rows = csvText
-    .trim()
-    .split('\n')
-    .map(row => row.split(','))
-    .filter(row => row.length > 1);
-
-  const [headers, ...data] = rows;
-
-  console.log('Header count:', headers.length);
-  console.log('Row lengths:', data.slice(0, 5).map(r => r.length));
-
-const table = $('#productTable').DataTable({
-  data: data,
-  columns: headers.map(h => ({ title: h })),
-  paging: true,
-  searching: true,
-  scrollX: true,
-  initComplete: function () {
-    // Loop through each column
-    this.api().columns().every(function () {
-      const column = this;
-      const select = $('<select><option value="">Filter</option></select>')
-        .appendTo($(column.header()).empty())
-        .on('change', function () {
-          const val = $.fn.dataTable.util.escapeRegex($(this).val());
-          column.search(val ? '^' + val + '$' : '', true, false).draw();
-        });
-
-      // Get unique values in this column
-      column
-        .data()
-        .unique()
-        .sort()
-        .each(function (d) {
-          select.append('<option value="' + d + '">' + d + '</option>');
-        });
-    });
-  }
-});
-
-}
-
-async function loadData() {
-  const response = await fetch(
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
-  );
-  const csvText = await response.text();
-
-  console.log("Raw CSV Text:", csvText); // 👈 Log the CSV itself
-
-  const rows = csvText
-    .trim()
-    .split('\n')
-    .map(row => row.split(','))
-    .filter(row => row.length > 1);
-
-  const [headers, ...data] = rows;
-
-  console.log("Headers:", headers);
-  console.log("First 5 Rows:", data.slice(0, 5)); // 👈 Show parsed data
-
-  $('#productTable').DataTable({
-    data: data,
-    columns: headers.map(h => ({ title: h })),
-    paging: true,
-    searching: true,
-    scrollX: true
-  });
-}
-
-loadData();
-
-</script>
-
-</body>
-</html>
-
+      const response = await fetch(csvUrl);
+      const
