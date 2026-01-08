@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Infotainment Feature Audit</title>
+  <title>Product Dashboard</title>
 
   <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
@@ -26,7 +26,7 @@
 
     .dropdown-filter {
       position: relative;
-      width: 250px;
+      width: 220px;
     }
 
     .dropdown-btn {
@@ -46,39 +46,18 @@
       background: white;
       border: 1px solid #ccc;
       z-index: 1000;
-      max-height: 320px;
+      max-height: 300px;
       overflow-y: auto;
       padding: 10px;
-    }
-
-    .dropdown-content input[type="text"] {
-      width: 100%;
-      padding: 5px;
-      margin-bottom: 8px;
-      box-sizing: border-box;
-    }
-
-    .dropdown-content label {
-      display: block;
-      margin-bottom: 4px;
-      cursor: pointer;
     }
 
     .dropdown-filter.open .dropdown-content {
       display: block;
     }
 
-    .slider-label {
-      margin-top: 8px;
-      font-size: 0.9em;
-    }
-
-    table {
-      width: 100%;
-    }
-
-    button {
-      margin-left: auto;
+    .checkbox-list label {
+      display: block;
+      margin-bottom: 4px;
     }
 
     .slider-inputs {
@@ -91,6 +70,14 @@
       width: 50%;
       padding: 4px;
     }
+
+    table {
+      width: 100%;
+    }
+
+    button {
+      height: 40px;
+    }
   </style>
 </head>
 <body>
@@ -98,28 +85,28 @@
   <h2>UDS Infotainment Feature Audit (Sliders and Multiselect Filters)</h2>
 
   <div class="filters">
-    <!-- Region filter -->
-    <div id="regionFilter" class="dropdown-filter">
+    <!-- Region Filter -->
+    <div class="dropdown-filter" id="regionFilter">
       <div class="dropdown-btn">Filter by Region</div>
       <div class="dropdown-content">
-        <input type="text" placeholder="Search Region..." onkeyup="filterCheckboxList(this)">
+        <input type="text" placeholder="Search..." onkeyup="filterCheckboxList(this)" />
         <label><input type="checkbox" class="select-all" checked> Select All</label>
         <div class="checkbox-list"></div>
       </div>
     </div>
 
-    <!-- Make filter -->
-    <div id="makeFilter" class="dropdown-filter">
+    <!-- Make Filter -->
+    <div class="dropdown-filter" id="makeFilter">
       <div class="dropdown-btn">Filter by Make</div>
       <div class="dropdown-content">
-        <input type="text" placeholder="Search Make..." onkeyup="filterCheckboxList(this)">
+        <input type="text" placeholder="Search..." onkeyup="filterCheckboxList(this)" />
         <label><input type="checkbox" class="select-all" checked> Select All</label>
         <div class="checkbox-list"></div>
       </div>
     </div>
 
-    <!-- Sliders for numeric specs -->
-    <div id="slider-I" class="dropdown-filter">
+    <!-- Slider Filters -->
+    <div class="dropdown-filter" id="slider-8">
       <div class="dropdown-btn">Filter Column I</div>
       <div class="dropdown-content">
         <div id="slider-range-8"></div>
@@ -130,7 +117,7 @@
       </div>
     </div>
 
-    <div id="slider-K" class="dropdown-filter">
+    <div class="dropdown-filter" id="slider-10">
       <div class="dropdown-btn">Filter Column K</div>
       <div class="dropdown-content">
         <div id="slider-range-10"></div>
@@ -141,7 +128,7 @@
       </div>
     </div>
 
-    <div id="slider-M" class="dropdown-filter">
+    <div class="dropdown-filter" id="slider-12">
       <div class="dropdown-btn">Filter Column M</div>
       <div class="dropdown-content">
         <div id="slider-range-12"></div>
@@ -152,7 +139,7 @@
       </div>
     </div>
 
-    <div id="slider-O" class="dropdown-filter">
+    <div class="dropdown-filter" id="slider-14">
       <div class="dropdown-btn">Filter Column O</div>
       <div class="dropdown-content">
         <div id="slider-range-14"></div>
@@ -166,33 +153,155 @@
     <button onclick="clearAllFilters()">Clear All</button>
   </div>
 
-  <table id="productTable" class="display" style="width:100%"></table>
+  <table id="productTable" class="display"></table>
 
-  <!-- Libraries -->
+  <!-- JS Libraries -->
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/distribute/nouislider.min.js"></script>
 
   <script>
     let table;
 
     async function loadData() {
-      const response = await fetch(
-        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
-      );
+      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv');
       const csvText = await response.text();
 
-      const rows = csvText
-        .trim()
-        .split('\n')
-        .map(row => row.split(','))
-        .filter(row => row.length > 1);
-
+      const rows = csvText.trim().split('\n').map(row => row.split(',')).filter(row => row.length > 1);
       const [headers, ...data] = rows;
 
       const thead = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
-      const tbody = '<tbody>' + data.map(row =>
-        `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
-      ).join('') + '</tbody>';
+      const tbody = '<tbody>' + data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('') + '</tbody>';
 
-      document.getElementB
+      document.getElementById('productTable').innerHTML = thead + tbody;
+
+      table = $('#productTable').DataTable({
+        paging: true,
+        searching: true,
+        scrollX: true
+      });
+
+      createDropdownCheckboxes(0, 'regionFilter');
+      createDropdownCheckboxes(1, 'makeFilter');
+
+      createSliderFilter(8);
+      createSliderFilter(10);
+      createSliderFilter(12);
+      createSliderFilter(14);
+    }
+
+    function createDropdownCheckboxes(colIndex, containerId) {
+      const column = table.column(colIndex);
+      const container = document.querySelector(`#${containerId} .checkbox-list`);
+      const values = column.data().unique().sort().toArray();
+
+      container.innerHTML = '';
+      values.forEach(val => {
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" class="filter-option" value="${val}" checked> ${val}`;
+        container.appendChild(label);
+      });
+
+      container.querySelectorAll('input').forEach(input => {
+        input.addEventListener('change', applyFilters);
+      });
+
+      const selectAll = document.querySelector(`#${containerId} .select-all`);
+      selectAll.addEventListener('change', function () {
+        const allOptions = container.querySelectorAll('input[type=checkbox]');
+        allOptions.forEach(opt => opt.checked = this.checked);
+        applyFilters();
+      });
+    }
+
+    function createSliderFilter(colIndex) {
+      const columnData = table.column(colIndex).data().map(Number).filter(val => !isNaN(val));
+      const min = Math.min(...columnData);
+      const max = Math.max(...columnData);
+
+      const slider = document.getElementById(`slider-range-${colIndex}`);
+      const inputMin = document.getElementById(`min-${colIndex}`);
+      const inputMax = document.getElementById(`max-${colIndex}`);
+
+      noUiSlider.create(slider, {
+        start: [min, max],
+        connect: true,
+        range: { min, max },
+        tooltips: true,
+        step: 1
+      });
+
+      slider.noUiSlider.on('update', function (values) {
+        inputMin.value = Math.floor(values[0]);
+        inputMax.value = Math.ceil(values[1]);
+        applyFilters();
+      });
+
+      inputMin.addEventListener('change', () => {
+        slider.noUiSlider.set([inputMin.value, null]);
+      });
+
+      inputMax.addEventListener('change', () => {
+        slider.noUiSlider.set([null, inputMax.value]);
+      });
+    }
+
+    function applyFilters() {
+      // Clear existing custom filters
+      $.fn.dataTable.ext.search = [];
+
+      // Checkbox filters
+      [['regionFilter', 0], ['makeFilter', 1]].forEach(([id, index]) => {
+        const checkedVals = Array.from(document.querySelectorAll(`#${id} .filter-option:checked`))
+          .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
+        table.column(index).search(checkedVals.length ? checkedVals.join('|') : '', true, false);
+      });
+
+      // Slider filters
+      [8, 10, 12, 14].forEach(colIndex => {
+        const minVal = parseFloat(document.getElementById(`min-${colIndex}`).value);
+        const maxVal = parseFloat(document.getElementById(`max-${colIndex}`).value);
+
+        $.fn.dataTable.ext.search.push(function (settings, data) {
+          const value = parseFloat(data[colIndex]);
+          return !isNaN(value) && value >= minVal && value <= maxVal;
+        });
+      });
+
+      table.draw();
+    }
+
+    function clearAllFilters() {
+      document.querySelectorAll('.filter-option').forEach(cb => cb.checked = true);
+      document.querySelectorAll('.select-all').forEach(cb => cb.checked = true);
+      [8, 10, 12, 14].forEach(colIndex => {
+        const slider = document.getElementById(`slider-range-${colIndex}`);
+        slider.noUiSlider.reset();
+      });
+      applyFilters();
+    }
+
+    function filterCheckboxList(input) {
+      const filter = input.value.toLowerCase();
+      const list = input.closest('.dropdown-content').querySelectorAll('.checkbox-list label');
+      list.forEach(label => {
+        const text = label.textContent.toLowerCase();
+        label.style.display = text.includes(filter) ? '' : 'none';
+      });
+    }
+
+    // Toggle dropdowns open/close
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.dropdown-filter').forEach(el => {
+        if (!el.contains(e.target)) el.classList.remove('open');
+      });
+      if (e.target.closest('.dropdown-btn')) {
+        const parent = e.target.closest('.dropdown-filter');
+        parent.classList.toggle('open');
+      }
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
