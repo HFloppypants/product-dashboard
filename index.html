@@ -221,7 +221,7 @@ function updateSlidersVisibility(){
   document.getElementById('passengerSlider').style.display =
     table.column(PASSENGER_COL).visible() ? 'flex' : 'none';
 }
-<script>
+
 function downloadView() {
   const visibleColumns = table.columns(':visible').indexes().toArray();
 
@@ -260,7 +260,7 @@ function downloadView() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
-</script>
+}
 
 function clearAllFilters(){
   location.reload();
