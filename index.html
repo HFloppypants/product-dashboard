@@ -124,6 +124,8 @@
   </div>
 
   <button onclick="clearAllFilters()">Clear All</button>
+  <button onclick="downloadView()">Download View</button>
+
 </div>
 
 <div id="columnSelector" class="col-selector"></div>
@@ -219,9 +221,50 @@ function updateSlidersVisibility(){
   document.getElementById('passengerSlider').style.display =
     table.column(PASSENGER_COL).visible() ? 'flex' : 'none';
 }
+<script>
+function downloadView() {
+  const visibleColumns = table.columns(':visible').indexes().toArray();
+
+  // Get headers for visible columns
+  const headers = visibleColumns.map(idx =>
+    table.column(idx).header().textContent.trim()
+  );
+
+  // Get filtered rows (all pages)
+  const rows = table.rows({ search: 'applied' }).data().toArray();
+
+  const csvRows = [];
+  csvRows.push(headers.join(','));
+
+  rows.forEach(row => {
+    const csvRow = visibleColumns.map(idx => {
+      let cell = row[idx] ?? '';
+      cell = cell.toString().replace(/"/g, '""');
+      if (cell.search(/("|,|\n)/g) >= 0) {
+        cell = `"${cell}"`;
+      }
+      return cell;
+    });
+    csvRows.push(csvRow.join(','));
+  });
+
+  const csvContent = csvRows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'feature-audit-view.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
 
 function clearAllFilters(){
   location.reload();
+
 }
 
 loadData();
