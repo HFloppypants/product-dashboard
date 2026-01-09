@@ -24,7 +24,6 @@
       padding: 10px;
       border: 1px solid #ccc;
       cursor: pointer;
-      user-select: none;
     }
 
     .dropdown-content {
@@ -38,32 +37,19 @@
       max-height: 300px;
       overflow-y: auto;
       padding: 10px;
-      box-sizing: border-box;
     }
 
-    .dropdown-content input[type="text"] {
-      width: 100%;
-      padding: 5px;
-      margin-bottom: 8px;
-      box-sizing: border-box;
-    }
-
-    .dropdown-content label { display: block; margin-bottom: 4px; cursor: pointer; }
     .dropdown-filter.open .dropdown-content { display: block; }
 
     .range-filter {
-      display: flex;
+      display: none;
       flex-direction: column;
       width: 260px;
       gap: 6px;
       padding: 10px;
       border: 1px solid #ccc;
       background: #fafafa;
-      box-sizing: border-box;
     }
-
-    .range-filter label { font-size: 14px; }
-    .range-filter input[type="range"] { width: 100%; }
 
     button {
       margin-left: auto;
@@ -74,18 +60,11 @@
       height: fit-content;
     }
 
-    /* Column selector */
     .col-selector {
       width: 100%;
       border: 1px solid #ccc;
       background: #fff;
       padding: 12px;
-      box-sizing: border-box;
-    }
-
-    .col-selector h3 {
-      margin: 0 0 10px 0;
-      font-size: 16px;
     }
 
     .col-groups {
@@ -98,432 +77,155 @@
       border: 1px solid #e0e0e0;
       background: #fafafa;
       padding: 10px;
-      border-radius: 4px;
     }
 
-    .col-group .group-head {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .col-group .cols {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding-left: 18px;
-    }
-
-    .col-group label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 400;
-      cursor: pointer;
-      line-height: 1.2;
-    }
+    .group-head { font-weight: 600; margin-bottom: 8px; }
+    .cols { padding-left: 16px; }
+    label { display: flex; gap: 6px; cursor: pointer; }
 
     table { width: 100%; }
   </style>
 </head>
 <body>
 
-  <h2>Feature Audit</h2>
+<h2>Feature Audit</h2>
 
-  <div class="filters">
-    <div id="regionFilter" class="dropdown-filter">
-      <div class="dropdown-btn">Filter by Region</div>
-      <div class="dropdown-content">
-        <input type="text" placeholder="Search Region..." onkeyup="filterCheckboxList(this)">
-        <label><input type="checkbox" class="select-all" checked> Select All</label>
-        <div class="checkbox-list"></div>
-      </div>
+<div class="filters">
+  <div id="regionFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Filter by Region</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
     </div>
-
-    <div id="makeFilter" class="dropdown-filter">
-      <div class="dropdown-btn">Filter by Make</div>
-      <div class="dropdown-content">
-        <input type="text" placeholder="Search Make..." onkeyup="filterCheckboxList(this)">
-        <label><input type="checkbox" class="select-all" checked> Select All</label>
-        <div class="checkbox-list"></div>
-      </div>
-    </div>
-
-    <!-- Slider filters (Centre Screen Size = column I, Passenger Screen Size = column K) -->
-    <div class="range-filter">
-      <label>
-        Centre Screen Size (in):
-        <span id="centreMinVal"></span> – <span id="centreMaxVal"></span>
-      </label>
-      <input type="range" id="centreMin" step="0.1">
-      <input type="range" id="centreMax" step="0.1">
-    </div>
-
-    <div class="range-filter">
-      <label>
-        Passenger Screen Size (in):
-        <span id="passMinVal"></span> – <span id="passMaxVal"></span>
-      </label>
-      <input type="range" id="passMin" step="0.1">
-      <input type="range" id="passMax" step="0.1">
-    </div>
-
-    <button onclick="clearAllFilters()">Clear All</button>
   </div>
 
-  <!-- Column grouping selector -->
-  <div id="columnSelector" class="col-selector"></div>
+  <div id="makeFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Filter by Make</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
+    </div>
+  </div>
 
-  <div style="height:16px"></div>
+  <div id="centreSlider" class="range-filter">
+    <label>Centre Screen Size (in):
+      <span id="centreMinVal"></span> – <span id="centreMaxVal"></span>
+    </label>
+    <input type="range" id="centreMin" step="0.1">
+    <input type="range" id="centreMax" step="0.1">
+  </div>
 
-  <table id="productTable" class="display" style="width:100%"></table>
+  <div id="passengerSlider" class="range-filter">
+    <label>Passenger Screen Size (in):
+      <span id="passMinVal"></span> – <span id="passMaxVal"></span>
+    </label>
+    <input type="range" id="passMin" step="0.1">
+    <input type="range" id="passMax" step="0.1">
+  </div>
 
-  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <button onclick="clearAllFilters()">Clear All</button>
+</div>
 
-  <script>
-    let table;
+<div id="columnSelector" class="col-selector"></div>
+<br>
 
-    // Column letters -> zero-based DataTables indices:
-    // I = 9th column -> index 8
-    // K = 11th column -> index 10
-    const CENTRE_SCREEN_COL_INDEX = 8;     // column I
-    const PASSENGER_SCREEN_COL_INDEX = 10; // column K
+<table id="productTable" class="display"></table>
 
-    const rangeDefaults = {
-      centre: { min: 0, max: 0 },
-      pass: { min: 0, max: 0 }
-    };
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-    // Column groupings (Excel-like letters)
-    const COLUMN_GROUPS = [
-      { name: 'Displays', letters: ['H','I','J','K','L','M','N','O','P'], defaultSelected: true },
-      { name: 'Media', letters: ['Q','R','S','T'], defaultSelected: false },
-      { name: 'Phone/Device', letters: ['U','V','X','Y','Z'], defaultSelected: false },
-      { name: 'Navigation', letters: ['AB','AC','AD','AE'], defaultSelected: false },
-      { name: 'Connectivity', letters: ['W','AA','AF','AG','AH','AK'], defaultSelected: false },
-      { name: 'System', letters: ['F','G','AI','AJ'], defaultSelected: false }
-    ];
+<script>
+let table;
 
-    function excelColToIndex(col) {
-      // Converts A->0, B->1, ... Z->25, AA->26, AB->27, etc.
-      let n = 0;
-      const s = col.trim().toUpperCase();
-      for (let i = 0; i < s.length; i++) {
-        const c = s.charCodeAt(i) - 64; // 'A' => 1
-        n = n * 26 + c;
-      }
-      return n - 1;
-    }
+const CENTRE_COL = 8;     // I
+const PASSENGER_COL = 10; // K
 
-    // Numeric range filter hooked into DataTables
-    $.fn.dataTable.ext.search.push(function (settings, data) {
-      const centre = parseFloat(data[CENTRE_SCREEN_COL_INDEX]);
-      const passenger = parseFloat(data[PASSENGER_SCREEN_COL_INDEX]);
+const COLUMN_GROUPS = [
+  { name:'Displays', letters:['H','I','J','K','L','M','N','O','P'], default:true },
+  { name:'Media', letters:['Q','R','S','T'] },
+  { name:'Phone/Device', letters:['U','V','X','Y','Z'] },
+  { name:'Navigation', letters:['AB','AC','AD','AE'] },
+  { name:'Connectivity', letters:['W','AA','AF','AG','AH','AK'] },
+  { name:'System', letters:['F','G','AI','AJ'] }
+];
 
-      if (Number.isNaN(centre) || Number.isNaN(passenger)) return false;
+function colIndex(c){ return [...c].reduce((n,l)=>n*26+l.charCodeAt()-64,0)-1 }
 
-      const cMin = parseFloat(document.getElementById('centreMin').value);
-      const cMax = parseFloat(document.getElementById('centreMax').value);
-      const pMin = parseFloat(document.getElementById('passMin').value);
-      const pMax = parseFloat(document.getElementById('passMax').value);
+$.fn.dataTable.ext.search.push(() => true);
 
-      return (
-        centre >= cMin && centre <= cMax &&
-        passenger >= pMin && passenger <= pMax
-      );
-    });
+async function loadData(){
+  const csv = await (await fetch(
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
+  )).text();
 
-    async function loadData() {
-      const response = await fetch(
-        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
-      );
-      const csvText = await response.text();
+  const rows = csv.trim().split('\n').map(r=>r.split(','));
+  const [headers,...data]=rows;
 
-      const rows = csvText
-        .trim()
-        .split('\n')
-        .map(row => row.split(',')) // simple CSV split (quoted commas will break)
-        .filter(row => row.length > 1);
+  document.getElementById('productTable').innerHTML =
+    `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+     <tbody>${data.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
 
-      const [headers, ...data] = rows;
+  table = $('#productTable').DataTable({scrollX:true,pageLength:25});
 
-      const thead = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
-      const tbody = '<tbody>' + data.map(row =>
-        `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
-      ).join('') + '</tbody>';
+  buildColumnSelector(headers);
+  applyDefaultVisibility();
+  updateSlidersVisibility();
+}
 
-      document.getElementById('productTable').innerHTML = thead + tbody;
-
-      table = $('#productTable').DataTable({
-        paging: true,
-        searching: true,
-        scrollX: true,
-        destroy: true,
-        pageLength: 25
-      });
-
-      createDropdownCheckboxes(0, 'regionFilter'); // Region
-      createDropdownCheckboxes(1, 'makeFilter');   // Make
-
-      initRangeFilters();
-
-      buildColumnSelector(headers);
-      applyDefaultColumnVisibility();
-
-      table.draw();
-    }
-
-    function createDropdownCheckboxes(colIndex, containerId) {
-      const column = table.column(colIndex);
-      const container = document.querySelector(`#${containerId} .checkbox-list`);
-      const values = column.data().unique().sort().toArray();
-
-      container.innerHTML = '';
-
-      values.forEach(val => {
-        const label = document.createElement('label');
-        label.innerHTML = `<input type="checkbox" class="filter-option" value="${val}" checked> ${val}`;
-        container.appendChild(label);
-      });
-
-      document.querySelectorAll(`#${containerId} input`).forEach(input => {
-        input.addEventListener('change', () => applyFilters());
-      });
-
-      const selectAll = document.querySelector(`#${containerId} .select-all`);
-      selectAll.addEventListener('change', function () {
-        const allOptions = container.querySelectorAll('input[type=checkbox]');
-        allOptions.forEach(opt => opt.checked = this.checked);
-        applyFilters();
-      });
-    }
-
-    function applyFilters() {
-      ['regionFilter', 'makeFilter'].forEach((id, index) => {
-        const checkedVals = Array.from(document.querySelectorAll(`#${id} .filter-option:checked`))
-          .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
-
-        table.column(index).search(checkedVals.length ? checkedVals.join('|') : '', true, false);
-      });
-
-      table.draw();
-    }
-
-    function initRangeFilters() {
-      const centreCol = table.column(CENTRE_SCREEN_COL_INDEX).data().toArray()
-        .map(v => parseFloat(v))
-        .filter(v => !Number.isNaN(v));
-
-      const passCol = table.column(PASSENGER_SCREEN_COL_INDEX).data().toArray()
-        .map(v => parseFloat(v))
-        .filter(v => !Number.isNaN(v));
-
-      const cMin = Math.min(...centreCol);
-      const cMax = Math.max(...centreCol);
-      const pMin = Math.min(...passCol);
-      const pMax = Math.max(...passCol);
-
-      rangeDefaults.centre.min = cMin;
-      rangeDefaults.centre.max = cMax;
-      rangeDefaults.pass.min = pMin;
-      rangeDefaults.pass.max = pMax;
-
-      setRange('centreMin', 'centreMax', 'centreMinVal', 'centreMaxVal', cMin, cMax);
-      setRange('passMin', 'passMax', 'passMinVal', 'passMaxVal', pMin, pMax);
-    }
-
-    function setRange(minId, maxId, minLabel, maxLabel, min, max) {
-      const minInput = document.getElementById(minId);
-      const maxInput = document.getElementById(maxId);
-      const minSpan = document.getElementById(minLabel);
-      const maxSpan = document.getElementById(maxLabel);
-
-      minInput.min = maxInput.min = min;
-      minInput.max = maxInput.max = max;
-
-      minInput.value = min;
-      maxInput.value = max;
-
-      minSpan.textContent = min;
-      maxSpan.textContent = max;
-
-      minInput.addEventListener('input', () => {
-        if (+minInput.value > +maxInput.value) minInput.value = maxInput.value;
-        minSpan.textContent = minInput.value;
-        table.draw();
-      });
-
-      maxInput.addEventListener('input', () => {
-        if (+maxInput.value < +minInput.value) maxInput.value = minInput.value;
-        maxSpan.textContent = maxInput.value;
-        table.draw();
-      });
-    }
-
-    function clearAllFilters() {
-      // Reset dropdown checkboxes
-      document.querySelectorAll('.filter-option').forEach(cb => cb.checked = true);
-      document.querySelectorAll('.select-all').forEach(cb => cb.checked = true);
-
-      // Reset sliders to full range
-      document.getElementById('centreMin').value = rangeDefaults.centre.min;
-      document.getElementById('centreMax').value = rangeDefaults.centre.max;
-      document.getElementById('centreMinVal').textContent = rangeDefaults.centre.min;
-      document.getElementById('centreMaxVal').textContent = rangeDefaults.centre.max;
-
-      document.getElementById('passMin').value = rangeDefaults.pass.min;
-      document.getElementById('passMax').value = rangeDefaults.pass.max;
-      document.getElementById('passMinVal').textContent = rangeDefaults.pass.min;
-      document.getElementById('passMaxVal').textContent = rangeDefaults.pass.max;
-
-      applyFilters();
-    }
-
-    function filterCheckboxList(input) {
-      const filter = input.value.toLowerCase();
-      const list = input.closest('.dropdown-content').querySelectorAll('.checkbox-list label');
-
-      list.forEach(label => {
-        const text = label.textContent.toLowerCase();
-        label.style.display = text.includes(filter) ? '' : 'none';
-      });
-    }
-
-    // Dropdown open/close
-    document.querySelectorAll('.dropdown-filter .dropdown-btn').forEach(btn => {
-      btn.addEventListener('click', function () {
-        const dropdown = this.parentElement;
-        dropdown.classList.toggle('open');
-
-        document.querySelectorAll('.dropdown-filter').forEach(el => {
-          if (el !== dropdown) el.classList.remove('open');
-        });
-      });
-    });
-
-    // Close dropdowns if clicking outside
-    window.addEventListener('click', function (e) {
-      if (!e.target.closest('.dropdown-filter')) {
-        document.querySelectorAll('.dropdown-filter').forEach(el => el.classList.remove('open'));
-      }
-    });
-
-    function buildColumnSelector(headers) {
-      const root = document.getElementById('columnSelector');
-
-      const groupsHtml = COLUMN_GROUPS.map(g => {
-        const colIdxs = g.letters.map(excelColToIndex);
-        const colsHtml = colIdxs.map(idx => {
-          const colName = headers[idx] ?? `Column ${idx+1}`;
-          const checked = g.defaultSelected ? 'checked' : '';
-          return `
-            <label>
-              <input type="checkbox" class="col-toggle" data-col-index="${idx}" ${checked}>
-              ${colName}
-            </label>
-          `;
-        }).join('');
-
-        const groupChecked = g.defaultSelected ? 'checked' : '';
-
-        return `
-          <div class="col-group" data-group="${g.name}">
-            <div class="group-head">
-              <input type="checkbox" class="group-toggle" data-group="${g.name}" ${groupChecked}>
-              <span>${g.name}</span>
-            </div>
-            <div class="cols">
-              ${colsHtml}
-            </div>
-          </div>
-        `;
+function buildColumnSelector(headers){
+  const root=document.getElementById('columnSelector');
+  root.innerHTML=`<h3>Select to Display</h3><div class="col-groups">${
+    COLUMN_GROUPS.map(g=>{
+      const cols=g.letters.map(l=>{
+        const i=colIndex(l);
+        return `<label><input type="checkbox" class="col" data-i="${i}" ${g.default?'checked':''}>${headers[i]}</label>`;
       }).join('');
+      return `<div class="col-group">
+        <div class="group-head"><label>
+        <input type="checkbox" class="group" ${g.default?'checked':''}> ${g.name}</label></div>
+        <div class="cols">${cols}</div></div>`;
+    }).join('')
+  }</div>`;
 
-      root.innerHTML = `
-        <h3>Select to Display</h3>
-        <div class="col-groups">
-          ${groupsHtml}
-        </div>
-      `;
-
-      // Wire events (delegated)
-      root.addEventListener('change', (e) => {
-        const t = e.target;
-
-        // Group toggle: sets all children + column visibility
-        if (t.classList.contains('group-toggle')) {
-          const groupName = t.getAttribute('data-group');
-          const groupEl = root.querySelector(`.col-group[data-group="${CSS.escape(groupName)}"]`);
-          const childChecks = groupEl.querySelectorAll('.col-toggle');
-          childChecks.forEach(cb => cb.checked = t.checked);
-
-          childChecks.forEach(cb => {
-            const idx = parseInt(cb.getAttribute('data-col-index'), 10);
-            table.column(idx).visible(cb.checked, false);
-          });
-
-          table.columns.adjust().draw(false);
-          updateGroupState(groupEl);
-          return;
-        }
-
-        // Individual column toggle
-        if (t.classList.contains('col-toggle')) {
-          const idx = parseInt(t.getAttribute('data-col-index'), 10);
-          table.column(idx).visible(t.checked, false);
-          table.columns.adjust().draw(false);
-
-          const groupEl = t.closest('.col-group');
-          updateGroupState(groupEl);
-          return;
-        }
+  root.addEventListener('change',e=>{
+    if(e.target.classList.contains('group')){
+      const cols=e.target.closest('.col-group').querySelectorAll('.col');
+      cols.forEach(c=>{
+        c.checked=e.target.checked;
+        table.column(+c.dataset.i).visible(c.checked,false);
       });
-
-      // Set initial indeterminate states (in case future defaults differ)
-      root.querySelectorAll('.col-group').forEach(updateGroupState);
     }
-
-    function updateGroupState(groupEl) {
-      const groupToggle = groupEl.querySelector('.group-toggle');
-      const children = Array.from(groupEl.querySelectorAll('.col-toggle'));
-      const checkedCount = children.filter(c => c.checked).length;
-
-      if (checkedCount === 0) {
-        groupToggle.checked = false;
-        groupToggle.indeterminate = false;
-      } else if (checkedCount === children.length) {
-        groupToggle.checked = true;
-        groupToggle.indeterminate = false;
-      } else {
-        groupToggle.checked = false;
-        groupToggle.indeterminate = true;
-      }
+    if(e.target.classList.contains('col')){
+      table.column(+e.target.dataset.i).visible(e.target.checked,false);
     }
+    table.columns.adjust().draw(false);
+    updateSlidersVisibility();
+  });
+}
 
-    function applyDefaultColumnVisibility() {
-      // Make Displays visible; all other grouped columns hidden by default.
-      // (Ungrouped columns remain visible.)
-      const visibleIdx = new Set();
-      COLUMN_GROUPS.forEach(g => {
-        const idxs = g.letters.map(excelColToIndex);
-        if (g.defaultSelected) idxs.forEach(i => visibleIdx.add(i));
-      });
+function applyDefaultVisibility(){
+  COLUMN_GROUPS.forEach(g=>{
+    g.letters.forEach(l=>{
+      table.column(colIndex(l)).visible(!!g.default,false);
+    });
+  });
+  table.draw(false);
+}
 
-      // Apply visibility for grouped columns only
-      COLUMN_GROUPS.forEach(g => {
-        g.letters.map(excelColToIndex).forEach(idx => {
-          table.column(idx).visible(visibleIdx.has(idx), false);
-        });
-      });
+function updateSlidersVisibility(){
+  document.getElementById('centreSlider').style.display =
+    table.column(CENTRE_COL).visible() ? 'flex' : 'none';
 
-      table.columns.adjust().draw(false);
-    }
+  document.getElementById('passengerSlider').style.display =
+    table.column(PASSENGER_COL).visible() ? 'flex' : 'none';
+}
 
-    loadData();
-  </script>
+function clearAllFilters(){
+  location.reload();
+}
+
+loadData();
+</script>
 
 </body>
 </html>
