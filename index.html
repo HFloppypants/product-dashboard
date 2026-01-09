@@ -1,14 +1,11 @@
+<meta name="robots" content="noindex, nofollow">
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Feature Audit Dashboard</title>
-  <meta name="robots" content="noindex, nofollow" />
+  <title>Feature Audits</title>
 
-  <!-- CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css" />
-
   <style>
     body {
       font-family: sans-serif;
@@ -17,81 +14,101 @@
 
     .filters {
       display: flex;
-      flex-wrap: wrap;
       gap: 20px;
       margin-bottom: 20px;
     }
 
-    .filter-box {
-      border: 1px solid #ccc;
+    .dropdown-filter {
+      position: relative;
+      width: 250px;
+    }
+
+    .dropdown-btn {
+      background: #f1f1f1;
       padding: 10px;
-      width: 200px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ccc;
+      z-index: 1000;
       max-height: 300px;
       overflow-y: auto;
+      padding: 10px;
     }
 
-    .filter-box h4 {
-      margin-top: 0;
-    }
-
-    .slider-container {
-      margin-bottom: 10px;
-    }
-
-    .slider-label {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-
-    #productTable {
+    .dropdown-content input[type="text"] {
       width: 100%;
+      padding: 5px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+
+    .dropdown-content label {
+      display: block;
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+
+    .dropdown-filter.open .dropdown-content {
+      display: block;
+    }
+
+    table {
+      width: 100%;
+    }
+
+    button {
+      margin-left: auto;
     }
   </style>
 </head>
 <body>
-  <h2>Feature Audit Dashboard (Sliders + Checkbox Filters)</h2>
+
+  <h2>Feature Audit with Dropdown Checkbox Filtering</h2>
 
   <div class="filters">
-    <div class="filter-box" id="regionFilter">
-      <h4>Filter by Region</h4>
-      <label><input type="checkbox" class="select-all" checked> Select All</label>
-      <div class="checkbox-list"></div>
+    <div id="regionFilter" class="dropdown-filter">
+      <div class="dropdown-btn">Filter by Region</div>
+      <div class="dropdown-content">
+        <input type="text" placeholder="Search Region..." onkeyup="filterCheckboxList(this)">
+        <label><input type="checkbox" class="select-all" checked> Select All</label>
+        <div class="checkbox-list"></div>
+      </div>
     </div>
 
-    <div class="filter-box" id="makeFilter">
-      <h4>Filter by Make</h4>
-      <label><input type="checkbox" class="select-all" checked> Select All</label>
-      <div class="checkbox-list"></div>
+    <div id="makeFilter" class="dropdown-filter">
+      <div class="dropdown-btn">Filter by Make</div>
+      <div class="dropdown-content">
+        <input type="text" placeholder="Search Make..." onkeyup="filterCheckboxList(this)">
+        <label><input type="checkbox" class="select-all" checked> Select All</label>
+        <div class="checkbox-list"></div>
+      </div>
     </div>
 
-    <div class="filter-box slider-container">
-      <div class="slider-label">Centre Screen Size (in)</div>
-      <div id="slider-centre"></div>
-    </div>
-
-    <div class="filter-box slider-container">
-      <div class="slider-label">Cluster Size (in)</div>
-      <div id="slider-cluster"></div>
-    </div>
-
-    <div class="filter-box slider-container">
-      <div class="slider-label"># Speakers</div>
-      <div id="slider-speakers"></div>
-    </div>
+    <button onclick="clearAllFilters()">Clear All</button>
   </div>
 
-  <table id="productTable" class="display"></table>
+  <table id="productTable" class="display" style="width:100%"></table>
 
-  <!-- JS -->
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/distribute/nouislider.min.js"></script>
 
   <script>
     let table;
 
     async function loadData() {
-      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv');
+      const response = await fetch(
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
+      );
       const csvText = await response.text();
 
       const rows = csvText
@@ -119,10 +136,6 @@
 
       createDropdownCheckboxes(0, 'regionFilter'); // Region
       createDropdownCheckboxes(1, 'makeFilter');   // Make
-
-      createSliderFilter('slider-centre', 10);  // Centre Screen Size (in)
-      createSliderFilter('slider-cluster', 13); // Cluster Size (in)
-      createSliderFilter('slider-speakers', 16); // # Speakers
     }
 
     function createDropdownCheckboxes(colIndex, containerId) {
@@ -138,70 +151,69 @@
         container.appendChild(label);
       });
 
-      // Event listeners
-      container.querySelectorAll('input').forEach(input => {
+      // Handle filtering
+      document.querySelectorAll(`#${containerId} input`).forEach(input => {
         input.addEventListener('change', () => applyFilters());
       });
 
+      // Select All logic
       const selectAll = document.querySelector(`#${containerId} .select-all`);
       selectAll.addEventListener('change', function () {
-        container.querySelectorAll('input[type=checkbox]').forEach(opt => opt.checked = this.checked);
+        const allOptions = container.querySelectorAll('input[type=checkbox]');
+        allOptions.forEach(opt => opt.checked = this.checked);
         applyFilters();
       });
     }
 
-    function createSliderFilter(sliderId, colIndex) {
-      const columnData = table.column(colIndex).data().map(val => parseFloat(val)).filter(v => !isNaN(v));
-      const min = Math.min(...columnData);
-      const max = Math.max(...columnData);
+    function applyFilters() {
+      ['regionFilter', 'makeFilter'].forEach((id, index) => {
+        const checkedVals = Array.from(document.querySelectorAll(`#${id} .filter-option:checked`))
+          .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
 
-      const slider = document.getElementById(sliderId);
-      if (!slider) return;
-
-      noUiSlider.create(slider, {
-        start: [min, max],
-        connect: true,
-        step: 1,
-        range: { min: min, max: max },
-        tooltips: true
+        table.column(index).search(checkedVals.length ? checkedVals.join('|') : '', true, false);
       });
 
-      slider.noUiSlider.on('update', () => applyFilters());
+      table.draw();
     }
 
-function applyFilters() {
-  // Region & Make filters (columns 0 and 1)
-  ['regionFilter', 'makeFilter'].forEach((id, index) => {
-    const checkedVals = Array.from(document.querySelectorAll(`#${id} .filter-option:checked`))
-      .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
-    table.column(index).search(checkedVals.length ? checkedVals.join('|') : '', true, false);
-  });
+    function clearAllFilters() {
+      document.querySelectorAll('.filter-option').forEach(cb => cb.checked = true);
+      document.querySelectorAll('.select-all').forEach(cb => cb.checked = true);
+      applyFilters();
+    }
 
-  // Reset previous search filters
-  $.fn.dataTable.ext.search = [];
+    function filterCheckboxList(input) {
+      const filter = input.value.toLowerCase();
+      const list = input.closest('.dropdown-content').querySelectorAll('.checkbox-list label');
 
-  // Only apply slider filters if they exist
-  const sliders = [
-    { id: 'slider-centre', col: 10 },
-    { id: 'slider-cluster', col: 13 },
-    { id: 'slider-speakers', col: 16 }
-  ];
-
-  sliders.forEach(({ id, col }) => {
-    const sliderEl = document.getElementById(id);
-    if (sliderEl && sliderEl.noUiSlider) {
-      const [min, max] = sliderEl.noUiSlider.get().map(parseFloat);
-      $.fn.dataTable.ext.search.push((settings, data) => {
-        const value = parseFloat(data[col]);
-        return value >= min && value <= max;
+      list.forEach(label => {
+        const text = label.textContent.toLowerCase();
+        label.style.display = text.includes(filter) ? '' : 'none';
       });
     }
-  });
 
-  table.draw();
-}
+    // Dropdown open/close
+    document.querySelectorAll('.dropdown-filter .dropdown-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const dropdown = this.parentElement;
+        dropdown.classList.toggle('open');
+
+        // Close others
+        document.querySelectorAll('.dropdown-filter').forEach(el => {
+          if (el !== dropdown) el.classList.remove('open');
+        });
+      });
+    });
+
+    // Close dropdowns if clicking outside
+    window.addEventListener('click', function (e) {
+      if (!e.target.closest('.dropdown-filter')) {
+        document.querySelectorAll('.dropdown-filter').forEach(el => el.classList.remove('open'));
+      }
+    });
 
     loadData();
   </script>
+
 </body>
 </html>
