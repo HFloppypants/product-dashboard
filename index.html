@@ -169,22 +169,35 @@
       slider.noUiSlider.on('update', () => applyFilters());
     }
 
-    function applyFilters() {
-      // Region & Make (columns 0,1)
-      ['regionFilter', 'makeFilter'].forEach((id, index) => {
-        const checkedVals = Array.from(document.querySelectorAll(`#${id} .filter-option:checked`))
-          .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
-        table.column(index).search(checkedVals.length ? checkedVals.join('|') : '', true, false);
+function applyFilters() {
+  // Region & Make filters (columns 0 and 1)
+  ['regionFilter', 'makeFilter'].forEach((id, index) => {
+    const checkedVals = Array.from(document.querySelectorAll(`#${id} .filter-option:checked`))
+      .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
+    table.column(index).search(checkedVals.length ? checkedVals.join('|') : '', true, false);
+  });
+
+  // Reset previous search filters
+  $.fn.dataTable.ext.search = [];
+
+  // Only apply slider filters if they exist
+  const sliders = [
+    { id: 'slider-centre', col: 10 },
+    { id: 'slider-cluster', col: 13 },
+    { id: 'slider-speakers', col: 16 }
+  ];
+
+  sliders.forEach(({ id, col }) => {
+    const sliderEl = document.getElementById(id);
+    if (sliderEl && sliderEl.noUiSlider) {
+      const [min, max] = sliderEl.noUiSlider.get().map(parseFloat);
+      $.fn.dataTable.ext.search.push((settings, data) => {
+        const value = parseFloat(data[col]);
+        return value >= min && value <= max;
       });
+    }
+  });
 
-      // Sliders
-      $.fn.dataTable.ext.search = [];
+  table.draw();
+}
 
-      const sliderConfigs = [
-        { id: 'slider-centre', col: 10 },
-        { id: 'slider-cluster', col: 13 },
-        { id: 'slider-speakers', col: 16 }
-      ];
-
-      sliderConfigs.forEach(cfg => {
-        co
