@@ -7,10 +7,7 @@
 
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-    }
+    body { font-family: sans-serif; padding: 20px; }
 
     .filters {
       display: flex;
@@ -20,10 +17,7 @@
       flex-wrap: wrap;
     }
 
-    .dropdown-filter {
-      position: relative;
-      width: 250px;
-    }
+    .dropdown-filter { position: relative; width: 250px; }
 
     .dropdown-btn {
       background: #f1f1f1;
@@ -37,8 +31,7 @@
       display: none;
       position: absolute;
       top: 100%;
-      left: 0;
-      right: 0;
+      left: 0; right: 0;
       background: white;
       border: 1px solid #ccc;
       z-index: 1000;
@@ -55,15 +48,8 @@
       box-sizing: border-box;
     }
 
-    .dropdown-content label {
-      display: block;
-      margin-bottom: 4px;
-      cursor: pointer;
-    }
-
-    .dropdown-filter.open .dropdown-content {
-      display: block;
-    }
+    .dropdown-content label { display: block; margin-bottom: 4px; cursor: pointer; }
+    .dropdown-filter.open .dropdown-content { display: block; }
 
     .range-filter {
       display: flex;
@@ -76,17 +62,8 @@
       box-sizing: border-box;
     }
 
-    .range-filter label {
-      font-size: 14px;
-    }
-
-    .range-filter input[type="range"] {
-      width: 100%;
-    }
-
-    table {
-      width: 100%;
-    }
+    .range-filter label { font-size: 14px; }
+    .range-filter input[type="range"] { width: 100%; }
 
     button {
       margin-left: auto;
@@ -94,12 +71,66 @@
       border: 1px solid #ccc;
       background: #f1f1f1;
       cursor: pointer;
+      height: fit-content;
     }
+
+    /* Column selector */
+    .col-selector {
+      width: 100%;
+      border: 1px solid #ccc;
+      background: #fff;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .col-selector h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+    }
+
+    .col-groups {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .col-group {
+      border: 1px solid #e0e0e0;
+      background: #fafafa;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .col-group .group-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .col-group .cols {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-left: 18px;
+    }
+
+    .col-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 400;
+      cursor: pointer;
+      line-height: 1.2;
+    }
+
+    table { width: 100%; }
   </style>
 </head>
 <body>
 
-  <h2>Feature Audit with Dropdown Checkbox Filtering + Slider Filters</h2>
+  <h2>Feature Audit</h2>
 
   <div class="filters">
     <div id="regionFilter" class="dropdown-filter">
@@ -142,6 +173,11 @@
     <button onclick="clearAllFilters()">Clear All</button>
   </div>
 
+  <!-- Column grouping selector -->
+  <div id="columnSelector" class="col-selector"></div>
+
+  <div style="height:16px"></div>
+
   <table id="productTable" class="display" style="width:100%"></table>
 
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -153,22 +189,40 @@
     // Column letters -> zero-based DataTables indices:
     // I = 9th column -> index 8
     // K = 11th column -> index 10
-    const CENTRE_SCREEN_COL_INDEX = 8;    // column I
+    const CENTRE_SCREEN_COL_INDEX = 8;     // column I
     const PASSENGER_SCREEN_COL_INDEX = 10; // column K
 
-    // Store defaults so "Clear All" can reset sliders
     const rangeDefaults = {
       centre: { min: 0, max: 0 },
       pass: { min: 0, max: 0 }
     };
 
+    // Column groupings (Excel-like letters)
+    const COLUMN_GROUPS = [
+      { name: 'Displays', letters: ['H','I','J','K','L','M','N','O','P'], defaultSelected: true },
+      { name: 'Media', letters: ['Q','R','S','T'], defaultSelected: false },
+      { name: 'Phone/Device', letters: ['U','V','X','Y','Z'], defaultSelected: false },
+      { name: 'Navigation', letters: ['AB','AC','AD','AE'], defaultSelected: false },
+      { name: 'Connectivity', letters: ['W','AA','AF','AG','AH','AK'], defaultSelected: false },
+      { name: 'System', letters: ['F','G','AI','AJ'], defaultSelected: false }
+    ];
+
+    function excelColToIndex(col) {
+      // Converts A->0, B->1, ... Z->25, AA->26, AB->27, etc.
+      let n = 0;
+      const s = col.trim().toUpperCase();
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i) - 64; // 'A' => 1
+        n = n * 26 + c;
+      }
+      return n - 1;
+    }
+
     // Numeric range filter hooked into DataTables
     $.fn.dataTable.ext.search.push(function (settings, data) {
-      // data[] entries are strings from the rendered table
       const centre = parseFloat(data[CENTRE_SCREEN_COL_INDEX]);
       const passenger = parseFloat(data[PASSENGER_SCREEN_COL_INDEX]);
 
-      // Treat blanks/non-numbers as failing the filter (change to "pass" if you prefer)
       if (Number.isNaN(centre) || Number.isNaN(passenger)) return false;
 
       const cMin = parseFloat(document.getElementById('centreMin').value);
@@ -191,7 +245,7 @@
       const rows = csvText
         .trim()
         .split('\n')
-        .map(row => row.split(',')) // NOTE: this is a simple CSV split; quoted commas will break it.
+        .map(row => row.split(',')) // simple CSV split (quoted commas will break)
         .filter(row => row.length > 1);
 
       const [headers, ...data] = rows;
@@ -215,7 +269,11 @@
       createDropdownCheckboxes(1, 'makeFilter');   // Make
 
       initRangeFilters();
-      table.draw(); // ensure initial draw respects slider defaults
+
+      buildColumnSelector(headers);
+      applyDefaultColumnVisibility();
+
+      table.draw();
     }
 
     function createDropdownCheckboxes(colIndex, containerId) {
@@ -231,12 +289,10 @@
         container.appendChild(label);
       });
 
-      // Handle filtering
       document.querySelectorAll(`#${containerId} input`).forEach(input => {
         input.addEventListener('change', () => applyFilters());
       });
 
-      // Select All logic
       const selectAll = document.querySelector(`#${containerId} .select-all`);
       selectAll.addEventListener('change', function () {
         const allOptions = container.querySelectorAll('input[type=checkbox]');
@@ -323,7 +379,7 @@
       document.getElementById('passMinVal').textContent = rangeDefaults.pass.min;
       document.getElementById('passMaxVal').textContent = rangeDefaults.pass.max;
 
-      applyFilters(); // also draws table
+      applyFilters();
     }
 
     function filterCheckboxList(input) {
@@ -342,7 +398,6 @@
         const dropdown = this.parentElement;
         dropdown.classList.toggle('open');
 
-        // Close others
         document.querySelectorAll('.dropdown-filter').forEach(el => {
           if (el !== dropdown) el.classList.remove('open');
         });
@@ -355,6 +410,117 @@
         document.querySelectorAll('.dropdown-filter').forEach(el => el.classList.remove('open'));
       }
     });
+
+    function buildColumnSelector(headers) {
+      const root = document.getElementById('columnSelector');
+
+      const groupsHtml = COLUMN_GROUPS.map(g => {
+        const colIdxs = g.letters.map(excelColToIndex);
+        const colsHtml = colIdxs.map(idx => {
+          const colName = headers[idx] ?? `Column ${idx+1}`;
+          const checked = g.defaultSelected ? 'checked' : '';
+          return `
+            <label>
+              <input type="checkbox" class="col-toggle" data-col-index="${idx}" ${checked}>
+              ${colName}
+            </label>
+          `;
+        }).join('');
+
+        const groupChecked = g.defaultSelected ? 'checked' : '';
+
+        return `
+          <div class="col-group" data-group="${g.name}">
+            <div class="group-head">
+              <input type="checkbox" class="group-toggle" data-group="${g.name}" ${groupChecked}>
+              <span>${g.name}</span>
+            </div>
+            <div class="cols">
+              ${colsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      root.innerHTML = `
+        <h3>Select to Display</h3>
+        <div class="col-groups">
+          ${groupsHtml}
+        </div>
+      `;
+
+      // Wire events (delegated)
+      root.addEventListener('change', (e) => {
+        const t = e.target;
+
+        // Group toggle: sets all children + column visibility
+        if (t.classList.contains('group-toggle')) {
+          const groupName = t.getAttribute('data-group');
+          const groupEl = root.querySelector(`.col-group[data-group="${CSS.escape(groupName)}"]`);
+          const childChecks = groupEl.querySelectorAll('.col-toggle');
+          childChecks.forEach(cb => cb.checked = t.checked);
+
+          childChecks.forEach(cb => {
+            const idx = parseInt(cb.getAttribute('data-col-index'), 10);
+            table.column(idx).visible(cb.checked, false);
+          });
+
+          table.columns.adjust().draw(false);
+          updateGroupState(groupEl);
+          return;
+        }
+
+        // Individual column toggle
+        if (t.classList.contains('col-toggle')) {
+          const idx = parseInt(t.getAttribute('data-col-index'), 10);
+          table.column(idx).visible(t.checked, false);
+          table.columns.adjust().draw(false);
+
+          const groupEl = t.closest('.col-group');
+          updateGroupState(groupEl);
+          return;
+        }
+      });
+
+      // Set initial indeterminate states (in case future defaults differ)
+      root.querySelectorAll('.col-group').forEach(updateGroupState);
+    }
+
+    function updateGroupState(groupEl) {
+      const groupToggle = groupEl.querySelector('.group-toggle');
+      const children = Array.from(groupEl.querySelectorAll('.col-toggle'));
+      const checkedCount = children.filter(c => c.checked).length;
+
+      if (checkedCount === 0) {
+        groupToggle.checked = false;
+        groupToggle.indeterminate = false;
+      } else if (checkedCount === children.length) {
+        groupToggle.checked = true;
+        groupToggle.indeterminate = false;
+      } else {
+        groupToggle.checked = false;
+        groupToggle.indeterminate = true;
+      }
+    }
+
+    function applyDefaultColumnVisibility() {
+      // Make Displays visible; all other grouped columns hidden by default.
+      // (Ungrouped columns remain visible.)
+      const visibleIdx = new Set();
+      COLUMN_GROUPS.forEach(g => {
+        const idxs = g.letters.map(excelColToIndex);
+        if (g.defaultSelected) idxs.forEach(i => visibleIdx.add(i));
+      });
+
+      // Apply visibility for grouped columns only
+      COLUMN_GROUPS.forEach(g => {
+        g.letters.map(excelColToIndex).forEach(idx => {
+          table.column(idx).visible(visibleIdx.has(idx), false);
+        });
+      });
+
+      table.columns.adjust().draw(false);
+    }
 
     loadData();
   </script>
