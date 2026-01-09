@@ -16,6 +16,8 @@
       display: flex;
       gap: 20px;
       margin-bottom: 20px;
+      align-items: flex-start;
+      flex-wrap: wrap;
     }
 
     .dropdown-filter {
@@ -43,6 +45,7 @@
       max-height: 300px;
       overflow-y: auto;
       padding: 10px;
+      box-sizing: border-box;
     }
 
     .dropdown-content input[type="text"] {
@@ -62,18 +65,41 @@
       display: block;
     }
 
+    .range-filter {
+      display: flex;
+      flex-direction: column;
+      width: 260px;
+      gap: 6px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background: #fafafa;
+      box-sizing: border-box;
+    }
+
+    .range-filter label {
+      font-size: 14px;
+    }
+
+    .range-filter input[type="range"] {
+      width: 100%;
+    }
+
     table {
       width: 100%;
     }
 
     button {
       margin-left: auto;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      background: #f1f1f1;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <h2>Feature Audit with Dropdown Checkbox Filtering</h2>
+  <h2>Feature Audit with Dropdown Checkbox Filtering + Slider Filters</h2>
 
   <div class="filters">
     <div id="regionFilter" class="dropdown-filter">
@@ -94,6 +120,25 @@
       </div>
     </div>
 
+    <!-- Slider filters (Centre Screen Size = column I, Passenger Screen Size = column K) -->
+    <div class="range-filter">
+      <label>
+        Centre Screen Size (in):
+        <span id="centreMinVal"></span> – <span id="centreMaxVal"></span>
+      </label>
+      <input type="range" id="centreMin" step="0.1">
+      <input type="range" id="centreMax" step="0.1">
+    </div>
+
+    <div class="range-filter">
+      <label>
+        Passenger Screen Size (in):
+        <span id="passMinVal"></span> – <span id="passMaxVal"></span>
+      </label>
+      <input type="range" id="passMin" step="0.1">
+      <input type="range" id="passMax" step="0.1">
+    </div>
+
     <button onclick="clearAllFilters()">Clear All</button>
   </div>
 
@@ -105,6 +150,38 @@
   <script>
     let table;
 
+    // Column letters -> zero-based DataTables indices:
+    // I = 9th column -> index 8
+    // K = 11th column -> index 10
+    const CENTRE_SCREEN_COL_INDEX = 8;    // column I
+    const PASSENGER_SCREEN_COL_INDEX = 10; // column K
+
+    // Store defaults so "Clear All" can reset sliders
+    const rangeDefaults = {
+      centre: { min: 0, max: 0 },
+      pass: { min: 0, max: 0 }
+    };
+
+    // Numeric range filter hooked into DataTables
+    $.fn.dataTable.ext.search.push(function (settings, data) {
+      // data[] entries are strings from the rendered table
+      const centre = parseFloat(data[CENTRE_SCREEN_COL_INDEX]);
+      const passenger = parseFloat(data[PASSENGER_SCREEN_COL_INDEX]);
+
+      // Treat blanks/non-numbers as failing the filter (change to "pass" if you prefer)
+      if (Number.isNaN(centre) || Number.isNaN(passenger)) return false;
+
+      const cMin = parseFloat(document.getElementById('centreMin').value);
+      const cMax = parseFloat(document.getElementById('centreMax').value);
+      const pMin = parseFloat(document.getElementById('passMin').value);
+      const pMax = parseFloat(document.getElementById('passMax').value);
+
+      return (
+        centre >= cMin && centre <= cMax &&
+        passenger >= pMin && passenger <= pMax
+      );
+    });
+
     async function loadData() {
       const response = await fetch(
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
@@ -114,7 +191,7 @@
       const rows = csvText
         .trim()
         .split('\n')
-        .map(row => row.split(','))
+        .map(row => row.split(',')) // NOTE: this is a simple CSV split; quoted commas will break it.
         .filter(row => row.length > 1);
 
       const [headers, ...data] = rows;
@@ -136,6 +213,9 @@
 
       createDropdownCheckboxes(0, 'regionFilter'); // Region
       createDropdownCheckboxes(1, 'makeFilter');   // Make
+
+      initRangeFilters();
+      table.draw(); // ensure initial draw respects slider defaults
     }
 
     function createDropdownCheckboxes(colIndex, containerId) {
@@ -143,7 +223,7 @@
       const container = document.querySelector(`#${containerId} .checkbox-list`);
       const values = column.data().unique().sort().toArray();
 
-      container.innerHTML = ''; // Clear
+      container.innerHTML = '';
 
       values.forEach(val => {
         const label = document.createElement('label');
@@ -176,10 +256,74 @@
       table.draw();
     }
 
+    function initRangeFilters() {
+      const centreCol = table.column(CENTRE_SCREEN_COL_INDEX).data().toArray()
+        .map(v => parseFloat(v))
+        .filter(v => !Number.isNaN(v));
+
+      const passCol = table.column(PASSENGER_SCREEN_COL_INDEX).data().toArray()
+        .map(v => parseFloat(v))
+        .filter(v => !Number.isNaN(v));
+
+      const cMin = Math.min(...centreCol);
+      const cMax = Math.max(...centreCol);
+      const pMin = Math.min(...passCol);
+      const pMax = Math.max(...passCol);
+
+      rangeDefaults.centre.min = cMin;
+      rangeDefaults.centre.max = cMax;
+      rangeDefaults.pass.min = pMin;
+      rangeDefaults.pass.max = pMax;
+
+      setRange('centreMin', 'centreMax', 'centreMinVal', 'centreMaxVal', cMin, cMax);
+      setRange('passMin', 'passMax', 'passMinVal', 'passMaxVal', pMin, pMax);
+    }
+
+    function setRange(minId, maxId, minLabel, maxLabel, min, max) {
+      const minInput = document.getElementById(minId);
+      const maxInput = document.getElementById(maxId);
+      const minSpan = document.getElementById(minLabel);
+      const maxSpan = document.getElementById(maxLabel);
+
+      minInput.min = maxInput.min = min;
+      minInput.max = maxInput.max = max;
+
+      minInput.value = min;
+      maxInput.value = max;
+
+      minSpan.textContent = min;
+      maxSpan.textContent = max;
+
+      minInput.addEventListener('input', () => {
+        if (+minInput.value > +maxInput.value) minInput.value = maxInput.value;
+        minSpan.textContent = minInput.value;
+        table.draw();
+      });
+
+      maxInput.addEventListener('input', () => {
+        if (+maxInput.value < +minInput.value) maxInput.value = minInput.value;
+        maxSpan.textContent = maxInput.value;
+        table.draw();
+      });
+    }
+
     function clearAllFilters() {
+      // Reset dropdown checkboxes
       document.querySelectorAll('.filter-option').forEach(cb => cb.checked = true);
       document.querySelectorAll('.select-all').forEach(cb => cb.checked = true);
-      applyFilters();
+
+      // Reset sliders to full range
+      document.getElementById('centreMin').value = rangeDefaults.centre.min;
+      document.getElementById('centreMax').value = rangeDefaults.centre.max;
+      document.getElementById('centreMinVal').textContent = rangeDefaults.centre.min;
+      document.getElementById('centreMaxVal').textContent = rangeDefaults.centre.max;
+
+      document.getElementById('passMin').value = rangeDefaults.pass.min;
+      document.getElementById('passMax').value = rangeDefaults.pass.max;
+      document.getElementById('passMinVal').textContent = rangeDefaults.pass.min;
+      document.getElementById('passMaxVal').textContent = rangeDefaults.pass.max;
+
+      applyFilters(); // also draws table
     }
 
     function filterCheckboxList(input) {
