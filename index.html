@@ -17,7 +17,7 @@ h3 { font-size:15px; margin-bottom:10px; }
 .dropdown-filter { position:relative; width:220px; }
 .dropdown-btn { background:#f1f1f1; padding:8px; border:1px solid #ccc; cursor:pointer; }
 
-.dropdown-content{
+.dropdown-content {
   display:none;
   position:absolute;
   top:100%;
@@ -32,7 +32,7 @@ h3 { font-size:15px; margin-bottom:10px; }
 
 .dropdown-filter.open .dropdown-content { display:block; }
 
-.range-filter{
+.range-filter {
   display:flex;
   flex-direction:column;
   gap:6px;
@@ -45,7 +45,7 @@ h3 { font-size:15px; margin-bottom:10px; }
 
 .col-panel { border:1px solid #ccc; padding:12px; margin-top:12px; }
 
-.col-groups{
+.col-groups {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
   gap:12px;
@@ -117,16 +117,50 @@ table { width:100%; }
 <script>
 let table;
 
+/* ===== CSV PARSER (FIXED) ===== */
+function parseCSV(text){
+  const rows=[], row=[];
+  let cur='', inQuotes=false;
+
+  for(let i=0;i<text.length;i++){
+    const c=text[i], n=text[i+1];
+
+    if(c === '"' && inQuotes && n === '"'){ cur+='"'; i++; continue; }
+    if(c === '"'){ inQuotes=!inQuotes; continue; }
+
+    if(c === ',' && !inQuotes){
+      row.push(cur); cur=''; continue;
+    }
+
+    if((c === '\n' || c === '\r') && !inQuotes){
+      if(cur || row.length){
+        row.push(cur);
+        rows.push(row.splice(0));
+        cur='';
+      }
+      continue;
+    }
+
+    cur+=c;
+  }
+  if(cur || row.length){
+    row.push(cur);
+    rows.push(row);
+  }
+  return rows;
+}
+
+/* ===== COLUMN INDEXING ===== */
 function excelColToIndex(col){
   return [...col].reduce((n,l)=>n*26+l.charCodeAt()-64,0)-1;
 }
 
 const REGION_COL=0, MAKE_COL=1, VEHICLE_SEG_COL=2, PRICE_SEG_COL=3;
-
 const OPERATING_SYSTEM_COL=excelColToIndex('G');
 const CENTRE_COL=excelColToIndex('I');
 const PASSENGER_COL=excelColToIndex('K');
 
+/* ===== COLUMN GROUPS ===== */
 const COLUMN_GROUPS=[
   {name:'Displays',letters:['H','I','J','K','L','M','N','O','P'],default:true},
   {name:'Media',letters:['Q','R','S','T']},
@@ -138,6 +172,7 @@ const COLUMN_GROUPS=[
 
 const numericFilters=new Map();
 
+/* ===== DATATABLE FILTER EXTENSION ===== */
 $.fn.dataTable.ext.search.push((settings,data)=>{
   for(const [col,st] of numericFilters){
     if(!table.column(col).visible()) continue;
@@ -147,17 +182,18 @@ $.fn.dataTable.ext.search.push((settings,data)=>{
   return true;
 });
 
+/* ===== LOAD DATA ===== */
 async function loadData(){
   const csv=await (await fetch(
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
   )).text();
 
-  const rows=csv.trim().split('\n').map(r=>r.split(','));
+  const rows=parseCSV(csv);
   const [headers,...data]=rows;
 
   document.getElementById('productTable').innerHTML=
     `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-     <tbody>${data.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+     <tbody>${data.map(r=>`<tr>${headers.map((_,i)=>`<td>${r[i]||''}</td>`).join('')}</tr>`).join('')}</tbody>`;
 
   table=$('#productTable').DataTable({scrollX:true,pageLength:25});
 
@@ -172,11 +208,12 @@ async function loadData(){
   table.draw(false);
 }
 
+/* ===== TOP DROPDOWNS ===== */
 function buildDropdown(col,id){
   const box=document.querySelector(`#${id} .checkbox-list`);
   if(!box) return;
 
-  const values=table.column(col).data().unique().sort().toArray();
+  const values=[...new Set(table.column(col).data().toArray())].sort();
   box.innerHTML='';
   values.forEach(v=>{
     box.innerHTML+=`<label><input type="checkbox" value="${v}" checked>${v}</label>`;
@@ -191,12 +228,15 @@ function applyTopFilters(){
   [[REGION_COL,'regionFilter'],[MAKE_COL,'makeFilter'],
    [VEHICLE_SEG_COL,'vehicleSegmentFilter'],[PRICE_SEG_COL,'priceSegmentFilter']]
   .forEach(([c,id])=>{
-    const vals=[...document.querySelectorAll(`#${id} input:checked`)].map(v=>v.value);
+    const vals=[...document.querySelectorAll(`#${id} input:checked`)]
+      .filter(v=>v.value)
+      .map(v=>v.value);
     table.column(c).search(vals.join('|'),true,false);
   });
   table.draw();
 }
 
+/* ===== COLUMN SELECTOR ===== */
 function buildColumnSelector(headers){
   const root=document.getElementById('columnSelector');
   root.innerHTML=`<h3>Select to Display</h3><div class="col-groups">${
@@ -216,11 +256,10 @@ function buildColumnSelector(headers){
 
   root.onchange=e=>{
     if(e.target.classList.contains('group-toggle')){
-      e.target.closest('.col-group').querySelectorAll('.col-toggle')
-        .forEach(cb=>{
-          cb.checked=e.target.checked;
-          table.column(+cb.dataset.i).visible(cb.checked,false);
-        });
+      e.target.closest('.col-group').querySelectorAll('.col-toggle').forEach(cb=>{
+        cb.checked=e.target.checked;
+        table.column(+cb.dataset.i).visible(cb.checked,false);
+      });
     }
     if(e.target.classList.contains('col-toggle')){
       table.column(+e.target.dataset.i).visible(e.target.checked,false);
@@ -238,14 +277,15 @@ function applyDefaultVisibility(){
   });
 }
 
+/* ===== ADDITIONAL FILTERS ===== */
 function renderAdditionalFilters(){
   const root=document.getElementById('dynamicFilters');
   root.innerHTML='';
+  numericFilters.clear();
 
   if(table.column(OPERATING_SYSTEM_COL).visible()){
-    const id='osFilter';
     const d=document.createElement('div');
-    d.id=id;
+    d.id='osFilter';
     d.className='dropdown-filter open';
     d.innerHTML=`
       <div class="dropdown-btn">Operating System</div>
@@ -254,7 +294,7 @@ function renderAdditionalFilters(){
         <div class="checkbox-list"></div>
       </div>`;
     root.appendChild(d);
-    buildDropdown(OPERATING_SYSTEM_COL,id);
+    buildDropdown(OPERATING_SYSTEM_COL,'osFilter');
   }
 
   addNumericFilter('Centre Screen Size (in)',CENTRE_COL,0.1);
@@ -262,10 +302,7 @@ function renderAdditionalFilters(){
 }
 
 function addNumericFilter(label,col,step){
-  if(!table.column(col).visible()){
-    numericFilters.delete(col);
-    return;
-  }
+  if(!table.column(col).visible()) return;
 
   const vals=table.column(col).data().toArray().map(v=>parseFloat(v)).filter(v=>!isNaN(v));
   if(!vals.length) return;
@@ -285,10 +322,10 @@ function addNumericFilter(label,col,step){
     table.draw();
   };
 
-  // FIX: root was undefined here. Append to the actual container.
   document.getElementById('dynamicFilters').appendChild(d);
 }
 
+/* ===== EXPORT / RESET ===== */
 function downloadView(){
   const cols=table.columns(':visible').indexes().toArray();
   const rows=table.rows({search:'applied'}).data().toArray();
