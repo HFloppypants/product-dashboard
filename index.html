@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="robots" content="noindex, nofollow">
-<title>Feature Audit</title>
+<title>Infotainment Feature Audit</title>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
 
@@ -68,7 +68,7 @@ table { width:100%; }
 
 <body>
 
-<h2>Feature Audit</h2>
+<h2>UDS Infotainment Feature Audit</h2>
 
 <div id="errorBox"></div>
 
@@ -143,8 +143,8 @@ const COLUMN_GROUPS = [
     default:true
   },
   {
-    name:'Audio & Voice',
-    headers:['Premium Audio','# Speakers','Integrated Voice Assistant']
+    name:'Media',
+    headers:['Premium Audio','# Speakers','Integrated Streaming Services','Broadcast Radio']
   },
   {
     name:'Navigation & Mapping',
@@ -152,24 +152,16 @@ const COLUMN_GROUPS = [
   },
   {
     name:'Connected Features',
-    headers:['WiFi Hotspot','Cellular Modem','OTA Updates','Connected Services Brand Name']
+    headers:['WiFi Hotspot','In-Vehicle Commerce','Integrated App Store','Digital Key','OTA Updates','Connected Services Brand Name']
   },
   {
     name:'Mobile Integration',
     headers:['Apple CarPlay','Android Auto','Wireless Phone Charging']
   },
   {
-    name:'Streaming & Radio',
-    headers:['Google Built-In','Integrated Streaming Services','Broadcast Radio']
+    name:'System',
+    headers:['Operating System','Google Built-In','Cellular Modem','# USB (A)','# USB (C)']
   },
-  {
-    name:'USB & Ports',
-    headers:['# USB  A   ','# USB  C   ']
-  },
-  {
-    name:'Digital & Commerce',
-    headers:['In-Vehicle Commerce','Integrated App Store','Digital Key']
-  }
 ];
 
 const REQUIRED_TOP_HEADERS = {
