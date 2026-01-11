@@ -16,10 +16,11 @@ h3 { font-size:15px; margin-bottom:10px; }
 .dropdown-filter { position:relative; width:220px; }
 .dropdown-btn { background:#f1f1f1; padding:8px; border:1px solid #ccc; cursor:pointer; }
 
-.dropdown-content{
+.dropdown-content {
   display:none;
   position:absolute;
-  top:100%; left:0; right:0;
+  top:100%;
+  left:0; right:0;
   background:#fff;
   border:1px solid #ccc;
   z-index:1000;
@@ -29,7 +30,7 @@ h3 { font-size:15px; margin-bottom:10px; }
 }
 .dropdown-filter.open .dropdown-content { display:block; }
 
-.range-filter{
+.range-filter {
   display:flex;
   flex-direction:column;
   gap:6px;
@@ -41,7 +42,7 @@ h3 { font-size:15px; margin-bottom:10px; }
 }
 
 .col-panel { border:1px solid #ccc; padding:12px; margin-top:12px; }
-.col-groups{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+.col-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
 .col-group { border:1px solid #e0e0e0; padding:10px; background:#fafafa; }
 .group-head { font-weight:600; margin-bottom:8px; }
 .cols { padding-left:18px; display:flex; flex-direction:column; gap:6px; }
@@ -107,7 +108,7 @@ table { width:100%; }
 
 <script>
 let table;
-let colIndex = {};
+const colIndex = {};
 const numericFilters = new Map();
 
 /* ===== SAFE CSV PARSER ===== */
@@ -120,9 +121,7 @@ function parseCSV(text){
     if(c === '"'){ inQuotes=!inQuotes; continue; }
     if(c === ',' && !inQuotes){ row.push(cur); cur=''; continue; }
     if((c === '\n' || c === '\r') && !inQuotes){
-      if(cur || row.length){
-        row.push(cur); rows.push(row.splice(0)); cur='';
-      }
+      if(cur || row.length){ row.push(cur); rows.push(row.splice(0)); cur=''; }
       continue;
     }
     cur+=c;
@@ -131,23 +130,20 @@ function parseCSV(text){
   return rows;
 }
 
-/* ===== COLUMN GROUPS (HEADER-BASED) ===== */
+/* ===== COLUMN GROUPS (RESTORED, HEADER-BASED) ===== */
 const COLUMN_GROUPS = [
   {
     name:'Displays',
     default:true,
     headers:[
       'Centre Screen Size (in)',
-      'Passenger Screen Size (in)',
-      'Rear Screen Size (in)',
-      'Instrument Cluster Size (in)'
+      'Passenger Screen Size (in)'
     ]
   },
   {
     name:'System',
     headers:[
-      'Operating System',
-      'OTA Updates'
+      'Operating System'
     ]
   }
 ];
@@ -184,7 +180,7 @@ async function loadData(){
   buildDropdown(colIndex['Vehicle Segment'],'vehicleSegmentFilter');
   buildDropdown(colIndex['Price Segment'],'priceSegmentFilter');
 
-  buildColumnSelector(headers);
+  buildColumnSelector();
   applyDefaultVisibility();
   renderAdditionalFilters();
   table.draw(false);
@@ -219,7 +215,7 @@ function applyTopFilters(){
 }
 
 /* ===== COLUMN SELECTOR ===== */
-function buildColumnSelector(headers){
+function buildColumnSelector(){
   const root=document.getElementById('columnSelector');
   root.innerHTML=`<h3>Select to Display</h3><div class="col-groups">${
     COLUMN_GROUPS.map(g=>`
@@ -272,6 +268,7 @@ function renderAdditionalFilters(){
   if(osCol!=null && table.column(osCol).visible()){
     const d=document.createElement('div');
     d.className='dropdown-filter open';
+    d.id='osFilter';
     d.innerHTML=`
       <div class="dropdown-btn">Operating System</div>
       <div class="dropdown-content" style="display:block">
@@ -279,7 +276,6 @@ function renderAdditionalFilters(){
         <div class="checkbox-list"></div>
       </div>`;
     root.appendChild(d);
-    d.id='osFilter';
     buildDropdown(osCol,'osFilter');
   }
 
@@ -307,7 +303,7 @@ function addNumericFilter(label,col,step){
     table.draw();
   };
 
-  document.getElementById('dynamicFilters').appendChild(d);
+  root.appendChild(d);
 }
 
 /* ===== UTIL ===== */
