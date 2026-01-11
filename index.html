@@ -2,595 +2,354 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Feature Audit</title>
+<meta charset="UTF-8" />
+<title>Feature Audit</title>
 
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
 
-  <style>
-    body { font-family: sans-serif; font-size: 14px; padding: 20px; }
-    h2 { font-size: 18px; margin: 0 0 12px 0; }
-    h3 { font-size: 15px; margin: 0 0 10px 0; }
+<style>
+body { font-family:sans-serif; font-size:14px; padding:20px; }
+h2 { font-size:18px; margin-bottom:12px; }
+h3 { font-size:15px; margin-bottom:10px; }
 
-    .filters {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-      align-items: flex-start;
-    }
+.filters {
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap;
+  margin-bottom:16px;
+}
 
-    .dropdown-filter { position: relative; width: 220px; }
-    .dropdown-btn { background: #f1f1f1; padding: 8px; border: 1px solid #ccc; cursor: pointer; user-select: none; }
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      top: 100%;
-      left: 0; right: 0;
-      background: #fff;
-      border: 1px solid #ccc;
-      z-index: 1000;
-      max-height: 240px;
-      overflow-y: auto;
-      padding: 8px;
-      box-sizing: border-box;
-    }
-    .dropdown-filter.open .dropdown-content { display: block; }
-    .dropdown-content label { display: flex; gap: 6px; cursor: pointer; margin-bottom: 6px; }
+.dropdown-filter {
+  position:relative;
+  width:220px;
+}
 
-    button {
-      padding: 8px 10px;
-      border: 1px solid #ccc;
-      background: #f1f1f1;
-      cursor: pointer;
-      height: fit-content;
-    }
+.dropdown-btn {
+  background:#f1f1f1;
+  padding:8px;
+  border:1px solid #ccc;
+  cursor:pointer;
+}
 
-    .panel {
-      border: 1px solid #ccc;
-      padding: 12px;
-      margin-top: 12px;
-      background: #fff;
-      box-sizing: border-box;
-    }
+.dropdown-content {
+  display:none;
+  position:absolute;
+  top:100%;
+  left:0; right:0;
+  background:#fff;
+  border:1px solid #ccc;
+  z-index:1000;
+  max-height:240px;
+  overflow-y:auto;
+  padding:8px;
+}
 
-    .col-groups {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
-    }
+.dropdown-filter.open .dropdown-content { display:block; }
 
-    .col-group {
-      border: 1px solid #e0e0e0;
-      padding: 10px;
-      background: #fafafa;
-      box-sizing: border-box;
-    }
+.range-filter {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:10px;
+  border:1px solid #ccc;
+  background:#fafafa;
+  max-width:420px;
+  margin-bottom:12px;
+}
 
-    .group-head {
-      font-weight: 600;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+.col-panel {
+  border:1px solid #ccc;
+  padding:12px;
+  margin-top:12px;
+}
 
-    .cols {
-      padding-left: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+.col-groups {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px;
+}
 
-    .range-filter {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 10px;
-      border: 1px solid #e0e0e0;
-      background: #fafafa;
-      margin-bottom: 12px;
-      max-width: 420px;
-      box-sizing: border-box;
-    }
+.col-group {
+  border:1px solid #e0e0e0;
+  padding:10px;
+  background:#fafafa;
+}
 
-    table { width: 100%; }
-  </style>
+.group-head { font-weight:600; margin-bottom:8px; }
+.cols { padding-left:18px; display:flex; flex-direction:column; gap:6px; }
+
+label { display:flex; gap:6px; cursor:pointer; }
+
+button {
+  padding:8px 10px;
+  border:1px solid #ccc;
+  background:#f1f1f1;
+  cursor:pointer;
+}
+
+table { width:100%; }
+</style>
 </head>
 
 <body>
-  <h2>Feature Audit</h2>
 
-  <!-- TOP FILTERS -->
-  <div class="filters">
-    <div id="regionFilter" class="dropdown-filter">
-      <div class="dropdown-btn">Region</div>
-      <div class="dropdown-content">
-        <label><input type="checkbox" class="select-all" checked> Select All</label>
-        <div class="checkbox-list"></div>
-      </div>
+<h2>Feature Audit</h2>
+
+<!-- TOP FILTERS -->
+<div class="filters">
+  <div id="regionFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Region</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
     </div>
-
-    <div id="makeFilter" class="dropdown-filter">
-      <div class="dropdown-btn">Make</div>
-      <div class="dropdown-content">
-        <label><input type="checkbox" class="select-all" checked> Select All</label>
-        <div class="checkbox-list"></div>
-      </div>
-    </div>
-
-    <div id="modelFilter" class="dropdown-filter">
-      <div class="dropdown-btn">Model</div>
-      <div class="dropdown-content">
-        <label><input type="checkbox" class="select-all" checked> Select All</label>
-        <div class="checkbox-list"></div>
-      </div>
-    </div>
-
-    <div id="vehicleSegmentFilter" class="dropdown-filter">
-      <div class="dropdown-btn">Vehicle Segment</div>
-      <div class="dropdown-content">
-        <label><input type="checkbox" class="select-all" checked> Select All</label>
-        <div class="checkbox-list"></div>
-      </div>
-    </div>
-
-    <div id="priceSegmentFilter" class="dropdown-filter">
-      <div class="dropdown-btn">Price Segment</div>
-      <div class="dropdown-content">
-        <label><input type="checkbox" class="select-all" checked> Select All</label>
-        <div class="checkbox-list"></div>
-      </div>
-    </div>
-
-    <button onclick="clearAllFilters()">Clear All</button>
-    <button onclick="downloadView()">Download View</button>
   </div>
 
-  <!-- COLUMN GROUPING -->
-  <div id="columnSelector" class="panel"></div>
-
-  <!-- ADDITIONAL FILTERS -->
-  <div class="panel">
-    <h3>Additional Filters</h3>
-    <div id="dynamicFilters"></div>
+  <div id="makeFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Make</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
+    </div>
   </div>
 
-  <div style="height: 14px;"></div>
+  <div id="vehicleSegmentFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Vehicle Segment</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
+    </div>
+  </div>
 
-  <table id="productTable" class="display"></table>
+  <div id="priceSegmentFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Price Segment</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
+    </div>
+  </div>
 
-  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <button onclick="clearAllFilters()">Clear All</button>
+  <button onclick="downloadView()">Download View</button>
+</div>
 
-  <script>
-    let table;
+<!-- COLUMN GROUPING -->
+<div id="columnSelector" class="col-panel"></div>
 
-    // Groupings defined by spreadsheet letters (A=0, B=1, ...)
-    const COLUMN_GROUPS = [
-      { name: 'Displays', letters: ['H','I','J','K','L','M','N','O','P'], defaultSelected: true },
-      { name: 'Media', letters: ['Q','R','S','T'], defaultSelected: false },
-      { name: 'Phone/Device', letters: ['U','V','X','Y','Z'], defaultSelected: false },
-      { name: 'Navigation', letters: ['AB','AC','AD','AE'], defaultSelected: false },
-      { name: 'Connectivity', letters: ['W','AA','AF','AG','AH','AK'], defaultSelected: false },
-      { name: 'System', letters: ['F','G','AI','AJ'], defaultSelected: false }
-    ];
+<!-- ADDITIONAL FILTERS -->
+<div class="col-panel">
+  <h3>Additional Filters</h3>
+  <div id="dynamicFilters"></div>
+</div>
 
-    // Fixed letter columns you already specified for sliders
-    const CENTRE_COL_INDEX = excelColToIndex('I'); // Centre screen size (in)
-    const PASSENGER_COL_INDEX = excelColToIndex('K'); // Passenger screen size (in)
+<table id="productTable" class="display"></table>
 
-    // Header-based indices for top filters and Operating System (robust)
-    let COL_REGION = null;
-    let COL_MAKE = null;
-    let COL_MODEL = null;
-    let COL_VEH_SEG = null;
-    let COL_PRICE_SEG = null;
-    let COL_OPERATING_SYSTEM = null;
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-    // Numeric filter state (per column)
-    const numericFilterState = new Map(); // colIndex -> {min,max,enabled}
+<script>
+let table;
 
-    function excelColToIndex(col) {
-      let n = 0;
-      const s = col.trim().toUpperCase();
-      for (let i = 0; i < s.length; i++) {
-        const c = s.charCodeAt(i) - 64; // A => 1
-        n = n * 26 + c;
-      }
-      return n - 1;
-    }
+/* ===== COLUMN LETTER INDICES (DETERMINISTIC) ===== */
+function excelColToIndex(col){
+  return [...col].reduce((n,l)=>n*26+l.charCodeAt()-64,0)-1;
+}
 
-    function findColIndex(headers, names) {
-      const lowered = headers.map(h => (h || '').trim().toLowerCase());
-      for (const name of names) {
-        const idx = lowered.indexOf(name.toLowerCase());
-        if (idx !== -1) return idx;
-      }
-      return null;
-    }
+const REGION_COL = 0;
+const MAKE_COL = 1;
+const VEHICLE_SEG_COL = 2;
+const PRICE_SEG_COL = 3;
 
-    // DataTables global search hook for numeric sliders
-    $.fn.dataTable.ext.search.push(function (settings, data) {
-      // Only apply numeric filters that are enabled AND whose columns are visible
-      for (const [colIndex, st] of numericFilterState.entries()) {
-        if (!st.enabled) continue;
-        if (!table.column(colIndex).visible()) continue;
+const OPERATING_SYSTEM_COL = excelColToIndex('G');
+const CENTRE_COL = excelColToIndex('I');
+const PASSENGER_COL = excelColToIndex('K');
 
-        const v = parseFloat(data[colIndex]);
-        if (Number.isNaN(v)) return false;
-        if (v < st.min || v > st.max) return false;
-      }
-      return true;
-    });
+/* ===== COLUMN GROUPS ===== */
+const COLUMN_GROUPS = [
+  { name:'Displays', letters:['H','I','J','K','L','M','N','O','P'], default:true },
+  { name:'Media', letters:['Q','R','S','T'] },
+  { name:'Phone/Device', letters:['U','V','X','Y','Z'] },
+  { name:'Navigation', letters:['AB','AC','AD','AE'] },
+  { name:'Connectivity', letters:['W','AA','AF','AG','AH','AK'] },
+  { name:'System', letters:['F','G','AI','AJ'] }
+];
 
-    async function loadData() {
-      const csv = await (await fetch(
-        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
-      )).text();
+/* ===== NUMERIC FILTER STATE ===== */
+const numericFilters = new Map();
 
-      const rows = csv.trim().split('\n').map(r => r.split(','));
-      const [headers, ...data] = rows;
+$.fn.dataTable.ext.search.push(function(settings,data){
+  for(const [col,st] of numericFilters){
+    if(!table.column(col).visible()) continue;
+    const v=parseFloat(data[col]);
+    if(isNaN(v) || v<st.min || v>st.max) return false;
+  }
+  return true;
+});
 
-      // Map important columns by header name
-      COL_REGION = findColIndex(headers, ['Region']);
-      COL_MAKE = findColIndex(headers, ['Make']);
-      COL_MODEL = findColIndex(headers, ['Model']);
-      COL_VEH_SEG = findColIndex(headers, ['Vehicle Segment', 'Segment', 'Vehicle segment']);
-      COL_PRICE_SEG = findColIndex(headers, ['Price Segment', 'Price segment']);
-      COL_OPERATING_SYSTEM = findColIndex(headers, ['Operating System', 'OS', 'Operating system']);
+/* ===== LOAD DATA ===== */
+async function loadData(){
+  const csv = await (await fetch(
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
+  )).text();
 
-      // Build table HTML
-      document.getElementById('productTable').innerHTML =
-        `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-         <tbody>${data.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  const rows = csv.trim().split('\n').map(r=>r.split(','));
+  const [headers,...data]=rows;
 
-      table = $('#productTable').DataTable({
-        scrollX: true,
-        pageLength: 25,
-        destroy: true
-      });
+  document.getElementById('productTable').innerHTML =
+    `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+     <tbody>${data.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
 
-      // Top dropdown filters (only if column found)
-      if (COL_REGION !== null) buildMultiCheckboxFilter(COL_REGION, 'regionFilter');
-      if (COL_MAKE !== null) buildMultiCheckboxFilter(COL_MAKE, 'makeFilter');
-      if (COL_MODEL !== null) buildMultiCheckboxFilter(COL_MODEL, 'modelFilter');
-      if (COL_VEH_SEG !== null) buildMultiCheckboxFilter(COL_VEH_SEG, 'vehicleSegmentFilter');
-      if (COL_PRICE_SEG !== null) buildMultiCheckboxFilter(COL_PRICE_SEG, 'priceSegmentFilter');
+  table = $('#productTable').DataTable({scrollX:true,pageLength:25});
 
-      buildColumnSelector(headers);
-      applyDefaultVisibility();     // FIX 1: actually apply default group visibility
-      renderAdditionalFilters();    // FIX 2: render after visibility is correct
-      applyTopFilters();            // ensure top filters apply
-      table.columns.adjust().draw(false);
-    }
+  buildDropdown(REGION_COL,'regionFilter');
+  buildDropdown(MAKE_COL,'makeFilter');
+  buildDropdown(VEHICLE_SEG_COL,'vehicleSegmentFilter');
+  buildDropdown(PRICE_SEG_COL,'priceSegmentFilter');
 
-    // --- Top dropdown and dynamic text dropdown builder (same structure) ---
-    function buildMultiCheckboxFilter(colIndex, containerIdOrEl) {
-      const container =
-        typeof containerIdOrEl === 'string'
-          ? document.querySelector(`#${containerIdOrEl} .checkbox-list`)
-          : containerIdOrEl.querySelector('.checkbox-list');
+  buildColumnSelector(headers);
+  applyDefaultVisibility();
+  renderAdditionalFilters();
+  table.draw(false);
+}
 
-      if (!container) return;
+/* ===== DROPDOWNS ===== */
+function buildDropdown(col,id){
+  const box=document.querySelector(`#${id} .checkbox-list`);
+  const values=table.column(col).data().unique().sort().toArray();
+  box.innerHTML='';
+  values.forEach(v=>{
+    box.innerHTML+=`<label><input type="checkbox" value="${v}" checked>${v}</label>`;
+  });
+  document.querySelectorAll(`#${id} input`).forEach(i=>{
+    i.onchange=()=>applyTopFilters();
+  });
+}
 
-      const values = table.column(colIndex).data().unique().sort().toArray();
-      container.innerHTML = '';
+function applyTopFilters(){
+  [[REGION_COL,'regionFilter'],
+   [MAKE_COL,'makeFilter'],
+   [VEHICLE_SEG_COL,'vehicleSegmentFilter'],
+   [PRICE_SEG_COL,'priceSegmentFilter']]
+  .forEach(([c,id])=>{
+    const vals=[...document.querySelectorAll(`#${id} input:checked`)].map(v=>v.value);
+    table.column(c).search(vals.join('|'),true,false);
+  });
+  table.draw();
+}
 
-      values.forEach(val => {
-        const label = document.createElement('label');
-        label.innerHTML = `<input type="checkbox" class="filter-option" value="${escapeHtml(val)}" checked> ${escapeHtml(val)}`;
-        container.appendChild(label);
-      });
-
-      const root =
-        typeof containerIdOrEl === 'string'
-          ? document.getElementById(containerIdOrEl)
-          : containerIdOrEl;
-
-      // Select All toggles only filter-option checkboxes
-      const selectAll = root.querySelector('.select-all');
-      if (selectAll) {
-        selectAll.onchange = function () {
-          root.querySelectorAll('.filter-option').forEach(cb => cb.checked = selectAll.checked);
-          // If this is a top filter, applyTopFilters; if dynamic filter, applyDynamicTextFilters handles via delegated hook
-          applyAllFilters();
-        };
-      }
-
-      // Any option change
-      root.querySelectorAll('.filter-option').forEach(cb => {
-        cb.onchange = () => applyAllFilters();
-      });
-    }
-
-    function applyTopFilters() {
-      // Apply only the top filters that exist
-      const defs = [
-        { col: COL_REGION, id: 'regionFilter' },
-        { col: COL_MAKE, id: 'makeFilter' },
-        { col: COL_MODEL, id: 'modelFilter' },
-        { col: COL_VEH_SEG, id: 'vehicleSegmentFilter' },
-        { col: COL_PRICE_SEG, id: 'priceSegmentFilter' }
-      ].filter(d => d.col !== null);
-
-      defs.forEach(d => {
-        const vals = Array.from(document.querySelectorAll(`#${d.id} .filter-option:checked`))
-          .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
-        table.column(d.col).search(vals.length ? vals.join('|') : '', true, false);
-      });
-    }
-
-    function applyDynamicTextFilters() {
-      // Any dynamic text filter carries data-col-index
-      document.querySelectorAll('#dynamicFilters .dyn-text-filter').forEach(wrapper => {
-        const col = parseInt(wrapper.getAttribute('data-col-index'), 10);
-        const vals = Array.from(wrapper.querySelectorAll('.filter-option:checked'))
-          .map(cb => $.fn.dataTable.util.escapeRegex(cb.value));
-        table.column(col).search(vals.length ? vals.join('|') : '', true, false);
-      });
-    }
-
-    function applyAllFilters() {
-      applyTopFilters();
-      applyDynamicTextFilters();
-      table.draw();
-    }
-
-    // --- Column selector (group + per-column, with indeterminate state) ---
-    function buildColumnSelector(headers) {
-      const root = document.getElementById('columnSelector');
-
-      root.innerHTML = `
-        <h3>Select to Display</h3>
-        <div class="col-groups">
-          ${COLUMN_GROUPS.map(g => {
-            const idxs = g.letters.map(excelColToIndex);
-            return `
-              <div class="col-group" data-group="${escapeHtml(g.name)}">
-                <div class="group-head">
-                  <input type="checkbox" class="group-toggle" data-group="${escapeHtml(g.name)}" ${g.defaultSelected ? 'checked' : ''}>
-                  <span>${escapeHtml(g.name)}</span>
-                </div>
-                <div class="cols">
-                  ${idxs.map(i => `
-                    <label>
-                      <input type="checkbox" class="col-toggle" data-col-index="${i}" ${g.defaultSelected ? 'checked' : ''}>
-                      ${escapeHtml(headers[i] ?? `Column ${i+1}`)}
-                    </label>
-                  `).join('')}
-                </div>
-              </div>
-            `;
-          }).join('')}
+/* ===== COLUMN SELECTOR ===== */
+function buildColumnSelector(headers){
+  const root=document.getElementById('columnSelector');
+  root.innerHTML=`<h3>Select to Display</h3><div class="col-groups">${
+    COLUMN_GROUPS.map(g=>{
+      return `<div class="col-group">
+        <div class="group-head">
+          <input type="checkbox" class="group-toggle" ${g.default?'checked':''}>
+          ${g.name}
         </div>
-      `;
+        <div class="cols">${
+          g.letters.map(l=>{
+            const i=excelColToIndex(l);
+            return `<label><input type="checkbox" class="col-toggle" data-i="${i}" ${g.default?'checked':''}>${headers[i]}</label>`;
+          }).join('')
+        }</div></div>`;
+    }).join('')
+  }</div>`;
 
-      // Delegated handler for both group + column toggles
-      root.addEventListener('change', (e) => {
-        const t = e.target;
-
-        if (t.classList.contains('group-toggle')) {
-          const groupEl = t.closest('.col-group');
-          const childCols = groupEl.querySelectorAll('.col-toggle');
-          childCols.forEach(cb => {
-            cb.checked = t.checked;
-            const idx = parseInt(cb.getAttribute('data-col-index'), 10);
-            table.column(idx).visible(cb.checked, false);
-          });
-          updateGroupState(groupEl);
-          table.columns.adjust().draw(false);
-          renderAdditionalFilters();
-          return;
-        }
-
-        if (t.classList.contains('col-toggle')) {
-          const idx = parseInt(t.getAttribute('data-col-index'), 10);
-          table.column(idx).visible(t.checked, false);
-
-          const groupEl = t.closest('.col-group');
-          updateGroupState(groupEl);
-
-          table.columns.adjust().draw(false);
-          renderAdditionalFilters();
-          return;
-        }
-      });
-
-      // Initialize group indeterminate states
-      root.querySelectorAll('.col-group').forEach(updateGroupState);
-    }
-
-    function updateGroupState(groupEl) {
-      const groupToggle = groupEl.querySelector('.group-toggle');
-      const cols = Array.from(groupEl.querySelectorAll('.col-toggle'));
-      const checked = cols.filter(c => c.checked).length;
-
-      if (checked === 0) {
-        groupToggle.checked = false;
-        groupToggle.indeterminate = false;
-      } else if (checked === cols.length) {
-        groupToggle.checked = true;
-        groupToggle.indeterminate = false;
-      } else {
-        groupToggle.checked = false;
-        groupToggle.indeterminate = true;
-      }
-    }
-
-    // FIX: This was missing in your version and prevented defaults + dynamic filters on load
-    function applyDefaultVisibility() {
-      COLUMN_GROUPS.forEach(g => {
-        g.letters.map(excelColToIndex).forEach(idx => {
-          table.column(idx).visible(!!g.defaultSelected, false);
-        });
+  root.onchange=e=>{
+    if(e.target.classList.contains('group-toggle')){
+      const group=e.target.closest('.col-group');
+      group.querySelectorAll('.col-toggle').forEach(cb=>{
+        cb.checked=e.target.checked;
+        table.column(+cb.dataset.i).visible(cb.checked,false);
       });
     }
-
-    // --- Additional Filters rendering ---
-    function renderAdditionalFilters() {
-      const root = document.getElementById('dynamicFilters');
-      root.innerHTML = '';
-
-      // 1) Operating System (text multi-checkbox), only when its column is visible
-      if (table.column(OPERATING_SYSTEM_COL_INDEX).visible()) {
-        const wrap = document.createElement('div');
-        wrap.className = 'dropdown-filter open dyn-text-filter';
-        wrap.setAttribute('data-col-index', String(OPERATING_SYSTEM_COL_INDEX));
-        wrap.innerHTML = `
-          <div class="dropdown-btn">Operating System</div>
-            <div class="dropdown-content" style="display:block; position:static; border:none; padding:0; max-height:none;">
-            <label><input type="checkbox" class="select-all" checked> Select All</label>
-            <div class="checkbox-list"></div>
-          </div>
-        ;
-        root.appendChild(wrap);
-        buildMultiCheckboxFilter(OPERATING_SYSTEM_COL_INDEX, wrap);
-      }
-
-
-      // 2) Centre Screen Size (numeric slider), only when column I is visible
-      if (table.column(CENTRE_COL_INDEX).visible()) {
-        root.appendChild(buildNumericSliderFilter({
-          colIndex: CENTRE_COL_INDEX,
-          label: 'Centre Screen Size (in)',
-          step: 0.1
-        }));
-      } else {
-        numericFilterState.delete(CENTRE_COL_INDEX);
-      }
-
-      // 3) Passenger Screen Size (numeric slider), only when column K is visible
-      if (table.column(PASSENGER_COL_INDEX).visible()) {
-        root.appendChild(buildNumericSliderFilter({
-          colIndex: PASSENGER_COL_INDEX,
-          label: 'Passenger Screen Size (in)',
-          step: 0.1
-        }));
-      } else {
-        numericFilterState.delete(PASSENGER_COL_INDEX);
-      }
-
-      // Apply filters after rebuild (keeps state consistent)
-      applyAllFilters();
+    if(e.target.classList.contains('col-toggle')){
+      table.column(+e.target.dataset.i).visible(e.target.checked,false);
     }
+    table.columns.adjust().draw(false);
+    renderAdditionalFilters();
+  };
+}
 
-    function buildNumericSliderFilter({ colIndex, label, step }) {
-      const values = table.column(colIndex).data().toArray()
-        .map(v => parseFloat(v))
-        .filter(v => !Number.isNaN(v));
-
-      const min = values.length ? Math.min(...values) : 0;
-      const max = values.length ? Math.max(...values) : 0;
-
-      // Preserve prior user selection if present; else default full range
-      const prev = numericFilterState.get(colIndex);
-      const curMin = prev ? prev.min : min;
-      const curMax = prev ? prev.max : max;
-
-      numericFilterState.set(colIndex, { min: curMin, max: curMax, enabled: true });
-
-      const wrap = document.createElement('div');
-      wrap.className = 'range-filter';
-      wrap.innerHTML = `
-        <div><strong>${escapeHtml(label)}:</strong> <span id="minVal-${colIndex}"></span> – <span id="maxVal-${colIndex}"></span></div>
-        <input type="range" id="min-${colIndex}" step="${step}">
-        <input type="range" id="max-${colIndex}" step="${step}">
-      `;
-
-      const minEl = wrap.querySelector(`#min-${colIndex}`);
-      const maxEl = wrap.querySelector(`#max-${colIndex}`);
-      const minVal = wrap.querySelector(`#minVal-${colIndex}`);
-      const maxVal = wrap.querySelector(`#maxVal-${colIndex}`);
-
-      minEl.min = maxEl.min = min;
-      minEl.max = maxEl.max = max;
-
-      minEl.value = curMin;
-      maxEl.value = curMax;
-
-      minVal.textContent = minEl.value;
-      maxVal.textContent = maxEl.value;
-
-      const onChange = () => {
-        if (+minEl.value > +maxEl.value) minEl.value = maxEl.value;
-        if (+maxEl.value < +minEl.value) maxEl.value = minEl.value;
-
-        minVal.textContent = minEl.value;
-        maxVal.textContent = maxEl.value;
-
-        numericFilterState.set(colIndex, { min: +minEl.value, max: +maxEl.value, enabled: true });
-        table.draw();
-      };
-
-      minEl.addEventListener('input', onChange);
-      maxEl.addEventListener('input', onChange);
-
-      return wrap;
-    }
-
-    // --- Download (visible columns + filtered rows) ---
-    function downloadView() {
-      const visibleCols = table.columns(':visible').indexes().toArray();
-      const headers = visibleCols.map(i => table.column(i).header().textContent.trim());
-
-      const rows = table.rows({ search: 'applied' }).data().toArray();
-
-      const out = [];
-      out.push(headers.map(csvEscape).join(','));
-
-      rows.forEach(r => {
-        out.push(visibleCols.map(i => csvEscape(r[i] ?? '')).join(','));
-      });
-
-      const blob = new Blob([out.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'feature-audit-view.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    function csvEscape(v) {
-      const s = String(v);
-      const escaped = s.replace(/"/g, '""');
-      return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
-    }
-
-    function escapeHtml(s) {
-      return String(s ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-    }
-
-    function clearAllFilters() {
-      // simple reset to known-good baseline
-      location.reload();
-    }
-
-    // Dropdown open/close behavior (works for top filters)
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.dropdown-btn');
-      if (btn && btn.parentElement.classList.contains('dropdown-filter')) {
-        const dd = btn.parentElement;
-        dd.classList.toggle('open');
-        document.querySelectorAll('.dropdown-filter').forEach(el => {
-          if (el !== dd) el.classList.remove('open');
-        });
-        return;
-      }
-      if (!e.target.closest('.dropdown-filter')) {
-        document.querySelectorAll('.dropdown-filter').forEach(el => el.classList.remove('open'));
-      }
+function applyDefaultVisibility(){
+  COLUMN_GROUPS.forEach(g=>{
+    g.letters.forEach(l=>{
+      table.column(excelColToIndex(l)).visible(!!g.default,false);
     });
+  });
+}
 
-    loadData();
-  </script>
+/* ===== ADDITIONAL FILTERS (FIXED) ===== */
+function renderAdditionalFilters(){
+  const root=document.getElementById('dynamicFilters');
+  root.innerHTML='';
+
+  if(table.column(OPERATING_SYSTEM_COL).visible()){
+    const d=document.createElement('div');
+    d.className='dropdown-filter open';
+    d.innerHTML=`<div class="dropdown-btn">Operating System</div>
+      <div class="dropdown-content" style="display:block">
+        <label><input type="checkbox" class="select-all" checked> Select All</label>
+        <div class="checkbox-list"></div>
+      </div>`;
+    root.appendChild(d);
+    buildDropdown(OPERATING_SYSTEM_COL,d.id='osFilter');
+  }
+
+  addNumericFilter('Centre Screen Size (in)',CENTRE_COL,0.1);
+  addNumericFilter('Passenger Screen Size (in)',PASSENGER_COL,0.1);
+}
+
+function addNumericFilter(label,col,step){
+  if(!table.column(col).visible()){
+    numericFilters.delete(col);
+    return;
+  }
+  const vals=table.column(col).data().toArray().map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+  const min=Math.min(...vals), max=Math.max(...vals);
+  numericFilters.set(col,{min,max});
+  const d=document.createElement('div');
+  d.className='range-filter';
+  d.innerHTML=`<strong>${label}</strong>
+    <input type="range" min="${min}" max="${max}" step="${step}" value="${min}">
+    <input type="range" min="${min}" max="${max}" step="${step}" value="${max}">`;
+  const [minR,maxR]=d.querySelectorAll('input');
+  minR.oninput=maxR.oninput=()=>{
+    numericFilters.set(col,{min:+minR.value,max:+maxR.value});
+    table.draw();
+  };
+  document.getElementById('dynamicFilters').appendChild(d);
+}
+
+/* ===== DOWNLOAD ===== */
+function downloadView(){
+  const cols=table.columns(':visible').indexes().toArray();
+  const rows=table.rows({search:'applied'}).data().toArray();
+  const out=[cols.map(i=>table.column(i).header().textContent).join(',')];
+  rows.forEach(r=>{
+    out.push(cols.map(i=>`"${(r[i]||'').replace(/"/g,'""')}"`).join(','));
+  });
+  const blob=new Blob([out.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='feature-audit-view.csv';
+  a.click();
+}
+
+function clearAllFilters(){ location.reload(); }
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.dropdown-btn');
+  if(b){
+    b.parentElement.classList.toggle('open');
+    return;
+  }
+  document.querySelectorAll('.dropdown-filter').forEach(d=>d.classList.remove('open'));
+});
+
+loadData();
+</script>
+
 </body>
 </html>
