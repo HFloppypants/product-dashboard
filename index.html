@@ -13,6 +13,7 @@ h2 { font-size:18px; margin-bottom:12px; }
 h3 { font-size:15px; margin-bottom:10px; }
 
 .filters { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+
 .dropdown-filter { position:relative; width:220px; }
 .dropdown-btn { background:#f1f1f1; padding:8px; border:1px solid #ccc; cursor:pointer; }
 
@@ -28,6 +29,7 @@ h3 { font-size:15px; margin-bottom:10px; }
   overflow-y:auto;
   padding:8px;
 }
+
 .dropdown-filter.open .dropdown-content { display:block; }
 
 .range-filter {
@@ -42,12 +44,19 @@ h3 { font-size:15px; margin-bottom:10px; }
 }
 
 .col-panel { border:1px solid #ccc; padding:12px; margin-top:12px; }
-.col-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+
+.col-groups {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px;
+}
+
 .col-group { border:1px solid #e0e0e0; padding:10px; background:#fafafa; }
 .group-head { font-weight:600; margin-bottom:8px; }
 .cols { padding-left:18px; display:flex; flex-direction:column; gap:6px; }
 
 label { display:flex; gap:6px; cursor:pointer; }
+
 button { padding:8px 10px; border:1px solid #ccc; background:#f1f1f1; cursor:pointer; }
 table { width:100%; }
 </style>
@@ -57,6 +66,7 @@ table { width:100%; }
 
 <h2>Feature Audit</h2>
 
+<!-- TOP FILTERS -->
 <div class="filters">
   <div id="regionFilter" class="dropdown-filter">
     <div class="dropdown-btn">Region</div>
@@ -94,8 +104,10 @@ table { width:100%; }
   <button onclick="downloadView()">Download View</button>
 </div>
 
+<!-- COLUMN GROUPING -->
 <div id="columnSelector" class="col-panel"></div>
 
+<!-- ADDITIONAL FILTERS -->
 <div class="col-panel">
   <h3>Additional Filters</h3>
   <div id="dynamicFilters"></div>
@@ -108,52 +120,71 @@ table { width:100%; }
 
 <script>
 let table;
-const colIndex = {};
-const numericFilters = new Map();
 
-/* ===== SAFE CSV PARSER ===== */
+/* ===== SAFE CSV PARSER (handles quoted commas) ===== */
 function parseCSV(text){
   const rows=[], row=[];
   let cur='', inQuotes=false;
+
   for(let i=0;i<text.length;i++){
     const c=text[i], n=text[i+1];
+
     if(c === '"' && inQuotes && n === '"'){ cur+='"'; i++; continue; }
     if(c === '"'){ inQuotes=!inQuotes; continue; }
+
     if(c === ',' && !inQuotes){ row.push(cur); cur=''; continue; }
+
     if((c === '\n' || c === '\r') && !inQuotes){
-      if(cur || row.length){ row.push(cur); rows.push(row.splice(0)); cur=''; }
+      if(cur || row.length){
+        row.push(cur);
+        rows.push(row.splice(0));
+        cur='';
+      }
       continue;
     }
+
     cur+=c;
   }
+
   if(cur || row.length){ row.push(cur); rows.push(row); }
   return rows;
 }
 
-/* ===== COLUMN GROUPS (RESTORED, HEADER-BASED) ===== */
+/* ===== COLUMN GROUPS (NUMERIC INDICES) =====
+   Excel letters converted to numeric indices (A=0, B=1, ... Z=25, AA=26, AB=27, ...)
+*/
 const COLUMN_GROUPS = [
-  {
-    name:'Displays',
-    default:true,
-    headers:[
-      'Centre Screen Size (in)',
-      'Passenger Screen Size (in)'
-    ]
-  },
-  {
-    name:'System',
-    headers:[
-      'Operating System'
-    ]
-  }
+  { name:'Displays',     cols:[ 7,  8,  9, 10, 11, 12, 13, 14, 15], default:true }, // H..P
+  { name:'Media',        cols:[16, 17, 18, 19] },                                     // Q..T
+  { name:'Phone/Device', cols:[20, 21, 23, 24, 25] },                                  // U,V,X,Y,Z
+  { name:'Navigation',   cols:[27, 28, 29, 30] },                                      // AB..AE
+  { name:'Connectivity', cols:[22, 26, 31, 32, 33, 36] },                              // W,AA,AF,AG,AH,AK
+  { name:'System',       cols:[ 5,  6, 34, 35] }                                       // F,G,AI,AJ
 ];
 
-/* ===== DATATABLE EXT FILTER ===== */
-$.fn.dataTable.ext.search.push((settings,data)=>{
+/* ===== Header-driven top filter mapping (fixes misalignment) ===== */
+const REQUIRED_TOP_HEADERS = {
+  region: 'Region',
+  make: 'Make',
+  vehicleSegment: 'Vehicle Segment',
+  priceSegment: 'Price Segment'
+};
+
+const REQUIRED_ADDITIONAL_HEADERS = {
+  os: 'Operating System',
+  centre: 'Centre Screen Size (in)',
+  passenger: 'Passenger Screen Size (in)'
+};
+
+let colIndex = {};                 // header -> numeric index
+const numericFilters = new Map();  // colIndex -> {min,max}
+
+/* ===== Datatables numeric filter hook ===== */
+$.fn.dataTable.ext.search.push(function(settings,data){
   for(const [col,st] of numericFilters){
     if(!table.column(col).visible()) continue;
     const v=parseFloat(data[col]);
-    if(isNaN(v)||v<st.min||v>st.max) return false;
+    if(isNaN(v) || v<st.min || v>st.max) return false;
   }
   return true;
 });
@@ -164,170 +195,257 @@ async function loadData(){
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
   )).text();
 
-  const rows=parseCSV(csv);
-  const [headers,...data]=rows;
+  const rows = parseCSV(csv);
+  const [headers, ...data] = rows;
 
-  headers.forEach((h,i)=>colIndex[h.trim()] = i);
+  // Build header -> index lookup (fixes off-by-one / extra-column issues)
+  colIndex = {};
+  headers.forEach((h,i)=>{ colIndex[String(h||'').trim()] = i; });
 
-  document.getElementById('productTable').innerHTML=
+  document.getElementById('productTable').innerHTML =
     `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-     <tbody>${data.map(r=>`<tr>${headers.map((_,i)=>`<td>${r[i]||''}</td>`).join('')}</tr>`).join('')}</tbody>`;
+     <tbody>${data.map(r=>`<tr>${headers.map((_,i)=>`<td>${r[i] ?? ''}</td>`).join('')}</tr>`).join('')}</tbody>`;
 
-  table=$('#productTable').DataTable({scrollX:true,pageLength:25});
+  table = $('#productTable').DataTable({scrollX:true,pageLength:25});
 
-  buildDropdown(colIndex['Region'],'regionFilter');
-  buildDropdown(colIndex['Make'],'makeFilter');
-  buildDropdown(colIndex['Vehicle Segment'],'vehicleSegmentFilter');
-  buildDropdown(colIndex['Price Segment'],'priceSegmentFilter');
+  // Build top dropdowns using resolved column indices
+  buildDropdownForColumn(colIndex[REQUIRED_TOP_HEADERS.region], 'regionFilter');
+  buildDropdownForColumn(colIndex[REQUIRED_TOP_HEADERS.make], 'makeFilter');
+  buildDropdownForColumn(colIndex[REQUIRED_TOP_HEADERS.vehicleSegment], 'vehicleSegmentFilter');
+  buildDropdownForColumn(colIndex[REQUIRED_TOP_HEADERS.priceSegment], 'priceSegmentFilter');
 
-  buildColumnSelector();
-  applyDefaultVisibility();
+  buildColumnSelector(headers);
+
+  // Optional: make the starting view predictable by hiding all, then showing top cols + default group
+  setInitialVisibility();
+
   renderAdditionalFilters();
   table.draw(false);
 }
 
-/* ===== DROPDOWNS ===== */
-function buildDropdown(col,id){
-  const box=document.querySelector(`#${id} .checkbox-list`);
-  if(!box || col==null) return;
-  const values=[...new Set(table.column(col).data().toArray())].sort();
-  box.innerHTML='';
-  values.forEach(v=>{
-    box.innerHTML+=`<label><input type="checkbox" value="${v}" checked>${v}</label>`;
+/* ===== Dropdown builder for a single column ===== */
+function buildDropdownForColumn(col, id){
+  const container = document.getElementById(id);
+  if(!container || col == null) return;
+
+  container.dataset.col = String(col);
+
+  const box = container.querySelector('.checkbox-list');
+  const selectAll = container.querySelector('.select-all');
+  if(!box || !selectAll) return;
+
+  const values = [...new Set(table.column(col).data().toArray())]
+    .map(v => String(v ?? '').trim())
+    .filter(v => v.length)
+    .sort();
+
+  box.innerHTML = values.map(v =>
+    `<label><input type="checkbox" value="${escapeHtmlAttr(v)}" checked>${escapeHtmlText(v)}</label>`
+  ).join('');
+
+  // Select All behavior
+  selectAll.onchange = () => {
+    const checked = selectAll.checked;
+    box.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = checked);
+    applyDropdownFilter(id);
+  };
+
+  // Individual checkbox behavior
+  box.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.onchange = () => {
+      const all = [...box.querySelectorAll('input[type="checkbox"]')];
+      const allChecked = all.length && all.every(x => x.checked);
+      const noneChecked = all.length && all.every(x => !x.checked);
+      selectAll.indeterminate = !allChecked && !noneChecked;
+      selectAll.checked = allChecked;
+      applyDropdownFilter(id);
+    };
   });
-  document.querySelectorAll(`#${id} input`).forEach(i=>i.onchange=applyTopFilters);
+
+  // Initialize select-all state
+  selectAll.indeterminate = false;
+  selectAll.checked = true;
 }
 
-function applyTopFilters(){
-  [
-    ['Region','regionFilter'],
-    ['Make','makeFilter'],
-    ['Vehicle Segment','vehicleSegmentFilter'],
-    ['Price Segment','priceSegmentFilter']
-  ].forEach(([h,id])=>{
-    const col=colIndex[h];
-    if(col==null) return;
-    const vals=[...document.querySelectorAll(`#${id} input:checked`)]
-      .filter(v=>v.value).map(v=>v.value);
-    table.column(col).search(vals.join('|'),true,false);
-  });
+/* Apply filter for a single dropdown by its container ID */
+function applyDropdownFilter(id){
+  const container = document.getElementById(id);
+  if(!container) return;
+
+  const col = Number(container.dataset.col);
+  const box = container.querySelector('.checkbox-list');
+  if(!box || Number.isNaN(col)) return;
+
+  const vals = [...box.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(x => x.value)
+    .filter(v => v && v.length);
+
+  // If nothing selected, filter to impossible value to show none
+  const regex = vals.length ? vals.map(escapeRegex).join('|') : '(?!)';
+  table.column(col).search(regex, true, false);
+
   table.draw();
 }
 
 /* ===== COLUMN SELECTOR ===== */
-function buildColumnSelector(){
-  const root=document.getElementById('columnSelector');
-  root.innerHTML=`<h3>Select to Display</h3><div class="col-groups">${
+function buildColumnSelector(headers){
+  const root = document.getElementById('columnSelector');
+  root.innerHTML = `<h3>Select to Display</h3><div class="col-groups">${
     COLUMN_GROUPS.map(g=>`
       <div class="col-group">
         <div class="group-head">
           <input type="checkbox" class="group-toggle" ${g.default?'checked':''}> ${g.name}
         </div>
         <div class="cols">
-          ${g.headers.map(h=>{
-            const i=colIndex[h];
-            return i!=null
-              ? `<label><input type="checkbox" class="col-toggle" data-i="${i}" ${g.default?'checked':''}>${h}</label>`
-              : '';
+          ${g.cols.map(i=>{
+            const name = headers[i] ?? `Column ${i}`;
+            return `<label><input type="checkbox" class="col-toggle" data-i="${i}" ${g.default?'checked':''}>${escapeHtmlText(name)}</label>`;
           }).join('')}
         </div>
-      </div>`).join('')
+      </div>
+    `).join('')
   }</div>`;
 
-  root.onchange=e=>{
+  root.onchange = e => {
     if(e.target.classList.contains('group-toggle')){
-      e.target.closest('.col-group').querySelectorAll('.col-toggle').forEach(cb=>{
-        cb.checked=e.target.checked;
-        table.column(+cb.dataset.i).visible(cb.checked,false);
+      const group = e.target.closest('.col-group');
+      group.querySelectorAll('.col-toggle').forEach(cb=>{
+        cb.checked = e.target.checked;
+        table.column(+cb.dataset.i).visible(cb.checked, false);
       });
     }
+
     if(e.target.classList.contains('col-toggle')){
-      table.column(+e.target.dataset.i).visible(e.target.checked,false);
+      table.column(+e.target.dataset.i).visible(e.target.checked, false);
     }
+
     table.columns.adjust().draw(false);
     renderAdditionalFilters();
   };
 }
 
-function applyDefaultVisibility(){
+/* Hide all columns, then show top filter columns + default group columns */
+function setInitialVisibility(){
+  // Hide everything first
+  table.columns().visible(false, false);
+
+  // Show top columns (by header mapping)
+  const topCols = [
+    colIndex[REQUIRED_TOP_HEADERS.region],
+    colIndex[REQUIRED_TOP_HEADERS.make],
+    colIndex[REQUIRED_TOP_HEADERS.vehicleSegment],
+    colIndex[REQUIRED_TOP_HEADERS.priceSegment]
+  ].filter(c => c != null);
+
+  topCols.forEach(c => table.column(c).visible(true, false));
+
+  // Show default group columns
   COLUMN_GROUPS.forEach(g=>{
-    g.headers.forEach(h=>{
-      const i=colIndex[h];
-      if(i!=null) table.column(i).visible(!!g.default,false);
-    });
+    if(!g.default) return;
+    g.cols.forEach(c => table.column(c).visible(true, false));
   });
+
+  table.columns.adjust().draw(false);
 }
 
 /* ===== ADDITIONAL FILTERS ===== */
 function renderAdditionalFilters(){
-  const root=document.getElementById('dynamicFilters');
-  root.innerHTML='';
+  const root = document.getElementById('dynamicFilters');
+  root.innerHTML = '';
   numericFilters.clear();
 
-  const osCol=colIndex['Operating System'];
-  if(osCol!=null && table.column(osCol).visible()){
-    const d=document.createElement('div');
-    d.className='dropdown-filter open';
-    d.id='osFilter';
-    d.innerHTML=`
+  // Operating System (dropdown)
+  const osCol = colIndex[REQUIRED_ADDITIONAL_HEADERS.os];
+  if(osCol != null && table.column(osCol).visible()){
+    const d = document.createElement('div');
+    d.id = 'osFilter';
+    d.className = 'dropdown-filter open';
+    d.innerHTML = `
       <div class="dropdown-btn">Operating System</div>
       <div class="dropdown-content" style="display:block">
         <label><input type="checkbox" class="select-all" checked> Select All</label>
         <div class="checkbox-list"></div>
       </div>`;
     root.appendChild(d);
-    buildDropdown(osCol,'osFilter');
+    buildDropdownForColumn(osCol, 'osFilter');
   }
 
-  addNumericFilter('Centre Screen Size (in)', colIndex['Centre Screen Size (in)'], 0.1);
-  addNumericFilter('Passenger Screen Size (in)', colIndex['Passenger Screen Size (in)'], 0.1);
+  // Numeric sliders
+  addNumericFilter('Centre Screen Size (in)', colIndex[REQUIRED_ADDITIONAL_HEADERS.centre], 0.1);
+  addNumericFilter('Passenger Screen Size (in)', colIndex[REQUIRED_ADDITIONAL_HEADERS.passenger], 0.1);
 }
 
-function addNumericFilter(label,col,step){
-  if(col==null || !table.column(col).visible()) return;
-  const vals=table.column(col).data().toArray().map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+function addNumericFilter(label, col, step){
+  if(col == null || !table.column(col).visible()){
+    numericFilters.delete(col);
+    return;
+  }
+
+  const vals = table.column(col).data().toArray()
+    .map(v => parseFloat(String(v ?? '').trim()))
+    .filter(v => !isNaN(v));
+
   if(!vals.length) return;
 
-  const min=Math.min(...vals), max=Math.max(...vals);
-  numericFilters.set(col,{min,max});
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
 
-  const d=document.createElement('div');
-  d.className='range-filter';
-  d.innerHTML=`<strong>${label}</strong>
+  numericFilters.set(col, {min, max});
+
+  const d = document.createElement('div');
+  d.className = 'range-filter';
+  d.innerHTML = `
+    <strong>${escapeHtmlText(label)}</strong>
     <input type="range" min="${min}" max="${max}" step="${step}" value="${min}">
-    <input type="range" min="${min}" max="${max}" step="${step}" value="${max}">`;
+    <input type="range" min="${min}" max="${max}" step="${step}" value="${max}">
+  `;
 
-  const [minR,maxR]=d.querySelectorAll('input');
-  minR.oninput=maxR.oninput=()=>{
-    numericFilters.set(col,{min:+minR.value,max:+maxR.value});
+  const [minR, maxR] = d.querySelectorAll('input');
+
+  minR.oninput = maxR.oninput = () => {
+    const a = +minR.value, b = +maxR.value;
+    numericFilters.set(col, {min: Math.min(a,b), max: Math.max(a,b)});
     table.draw();
   };
 
-  root.appendChild(d);
+  document.getElementById('dynamicFilters').appendChild(d);
 }
 
-/* ===== UTIL ===== */
+/* ===== DOWNLOAD ===== */
 function downloadView(){
-  const cols=table.columns(':visible').indexes().toArray();
-  const rows=table.rows({search:'applied'}).data().toArray();
-  const out=[cols.map(i=>table.column(i).header().textContent).join(',')];
+  const cols = table.columns(':visible').indexes().toArray();
+  const rows = table.rows({search:'applied'}).data().toArray();
+
+  const out = [cols.map(i=>table.column(i).header().textContent).join(',')];
   rows.forEach(r=>{
-    out.push(cols.map(i=>`"${(r[i]||'').replace(/"/g,'""')}"`).join(','));
+    out.push(cols.map(i=>`"${String(r[i] ?? '').replace(/"/g,'""')}"`).join(','));
   });
-  const blob=new Blob([out.join('\n')],{type:'text/csv'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='feature-audit-view.csv';
+
+  const blob = new Blob([out.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'feature-audit-view.csv';
   a.click();
 }
 
 function clearAllFilters(){ location.reload(); }
 
-document.addEventListener('click',e=>{
-  const b=e.target.closest('.dropdown-btn');
-  if(b){ b.parentElement.classList.toggle('open'); return; }
+/* ===== UI: dropdown open/close ===== */
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.dropdown-btn');
+  if(b){
+    b.parentElement.classList.toggle('open');
+    return;
+  }
   document.querySelectorAll('.dropdown-filter').forEach(d=>d.classList.remove('open'));
 });
+
+/* ===== Helpers ===== */
+function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function escapeHtmlText(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeHtmlAttr(s){ return escapeHtmlText(s); }
 
 loadData();
 </script>
