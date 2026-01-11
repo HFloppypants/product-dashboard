@@ -155,8 +155,8 @@ function excelColToIndex(col){
   return [...col].reduce((n,l)=>n*26+l.charCodeAt()-64,0)-1;
 }
 
-const REGION_COL=0, MAKE_COL=1, VEHICLE_SEG_COL=2, PRICE_SEG_COL=3;
-const OPERATING_SYSTEM_COL=excelColToIndex('G');
+const REGION_COL=0, MAKE_COL=1, VEHICLE_SEG_COL=3, PRICE_SEG_COL=4;
+const OPERATING_SYSTEM_COL=excelColToIndex('F');
 const CENTRE_COL=excelColToIndex('I');
 const PASSENGER_COL=excelColToIndex('K');
 
