@@ -243,8 +243,15 @@ async function loadData(){
 
     buildColumnSelector(headers);
     setInitialVisibility(headers);
-    renderAdditionalFilters();
-    table.draw(false);
+table.columns.adjust();
+table.draw(false);
+
+$(table.table().container())
+  .find('.dataTables_scrollHead table, .dataTables_scrollBody table')
+  .css('width', '100%');
+
+renderAdditionalFilters();
+
   }catch(err){
     console.error(err);
     showError(String(err && err.stack ? err.stack : err));
@@ -319,7 +326,14 @@ function buildColumnSelector(headers){
     if(e.target.classList.contains('col-toggle')){
       table.column(+e.target.dataset.i).visible(e.target.checked,false);
     }
-    table.columns.adjust().draw(false);
+    table.columns.adjust();
+table.draw(false);
+
+// HARD sync header/body widths
+$(table.table().container())
+  .find('.dataTables_scrollHead table, .dataTables_scrollBody table')
+  .css('width', '100%');
+
     renderAdditionalFilters();
   };
 }
@@ -335,7 +349,19 @@ function setInitialVisibility(headers){
     .flatMap(g=>g.headers.map(h=>colIndex[h]).filter(i=>i!=null))
     .forEach(i=>table.column(i).visible(true,false));
 
-  table.columns.adjust().draw(false);
+table.columns.adjust();
+table.draw(false);
+
+$(table.table().container())
+  .find('.dataTables_scrollHead table, .dataTables_scrollBody table')
+  .css('width', '100%');
+
+
+// HARD sync header/body widths
+$(table.table().container())
+  .find('.dataTables_scrollHead table, .dataTables_scrollBody table')
+  .css('width', '100%');
+
 }
 
 function renderAdditionalFilters(){
