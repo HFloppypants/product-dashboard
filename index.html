@@ -433,20 +433,21 @@
       root.innerHTML = '';
 
       // 1) Operating System (text multi-checkbox), only when its column is visible
-      if (COL_OPERATING_SYSTEM !== null && table.column(COL_OPERATING_SYSTEM).visible()) {
+      if (table.column(OPERATING_SYSTEM_COL_INDEX).visible()) {
         const wrap = document.createElement('div');
         wrap.className = 'dropdown-filter open dyn-text-filter';
-        wrap.setAttribute('data-col-index', String(COL_OPERATING_SYSTEM));
+        wrap.setAttribute('data-col-index', String(OPERATING_SYSTEM_COL_INDEX));
         wrap.innerHTML = `
           <div class="dropdown-btn">Operating System</div>
-          <div class="dropdown-content" style="display:block; position:static; border:none; padding:0; max-height:none;">
+            <div class="dropdown-content" style="display:block; position:static; border:none; padding:0; max-height:none;">
             <label><input type="checkbox" class="select-all" checked> Select All</label>
             <div class="checkbox-list"></div>
           </div>
-        `;
+        ;
         root.appendChild(wrap);
-        buildMultiCheckboxFilter(COL_OPERATING_SYSTEM, wrap);
+        buildMultiCheckboxFilter(OPERATING_SYSTEM_COL_INDEX, wrap);
       }
+
 
       // 2) Centre Screen Size (numeric slider), only when column I is visible
       if (table.column(CENTRE_COL_INDEX).visible()) {
