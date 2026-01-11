@@ -29,7 +29,6 @@ h3 { font-size:15px; margin-bottom:10px; }
   overflow-y:auto;
   padding:8px;
 }
-
 .dropdown-filter.open .dropdown-content { display:block; }
 
 .range-filter {
@@ -59,6 +58,11 @@ label { display:flex; gap:6px; cursor:pointer; }
 
 button { padding:8px 10px; border:1px solid #ccc; background:#f1f1f1; cursor:pointer; }
 table { width:100%; }
+
+#errorBox {
+  display:none; border:1px solid #d33; background:#fff3f3; padding:10px; margin-bottom:16px;
+  white-space:pre-wrap; font-family:monospace;
+}
 </style>
 </head>
 
@@ -66,11 +70,40 @@ table { width:100%; }
 
 <h2>Feature Audit</h2>
 
+<div id="errorBox"></div>
+
 <div class="filters">
-  <div id="regionFilter" class="dropdown-filter"><div class="dropdown-btn">Region</div><div class="dropdown-content"><label><input type="checkbox" class="select-all" checked> Select All</label><div class="checkbox-list"></div></div></div>
-  <div id="makeFilter" class="dropdown-filter"><div class="dropdown-btn">Make</div><div class="dropdown-content"><label><input type="checkbox" class="select-all" checked> Select All</label><div class="checkbox-list"></div></div></div>
-  <div id="vehicleSegmentFilter" class="dropdown-filter"><div class="dropdown-btn">Vehicle Segment</div><div class="dropdown-content"><label><input type="checkbox" class="select-all" checked> Select All</label><div class="checkbox-list"></div></div></div>
-  <div id="priceSegmentFilter" class="dropdown-filter"><div class="dropdown-btn">Price Segment</div><div class="dropdown-content"><label><input type="checkbox" class="select-all" checked> Select All</label><div class="checkbox-list"></div></div></div>
+  <div id="regionFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Region</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
+    </div>
+  </div>
+
+  <div id="makeFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Make</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
+    </div>
+  </div>
+
+  <div id="vehicleSegmentFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Vehicle Segment</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
+    </div>
+  </div>
+
+  <div id="priceSegmentFilter" class="dropdown-filter">
+    <div class="dropdown-btn">Price Segment</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" class="select-all" checked> Select All</label>
+      <div class="checkbox-list"></div>
+    </div>
+  </div>
 
   <button onclick="clearAllFilters()">Clear All</button>
   <button onclick="downloadView()">Download View</button>
@@ -93,47 +126,52 @@ let table;
 let colIndex = {};
 const numericFilters = new Map();
 
-/* ===== Robust CSV parser (CRLF-safe) ===== */
-function parseCSV(text){
-  const rows=[], row=[];
-  let cur='', inQuotes=false;
-
-  for(let i=0;i<text.length;i++){
-    const c=text[i], n=text[i+1];
-
-    if(c === '"' && inQuotes && n === '"'){ cur+='"'; i++; continue; }
-    if(c === '"'){ inQuotes=!inQuotes; continue; }
-
-    if(c === ',' && !inQuotes){ row.push(cur); cur=''; continue; }
-
-    if((c === '\n' || c === '\r') && !inQuotes){
-      if(c === '\r' && n === '\n') i++;
-      row.push(cur); rows.push(row.splice(0)); cur='';
-      continue;
-    }
-
-    cur+=c;
-  }
-  if(cur || row.length){ row.push(cur); rows.push(row); }
-  return rows;
-}
-
-/* ===== Column groups by HEADER NAME ===== */
 const COLUMN_GROUPS = [
-  { name:'Displays', headers:[
-    'Driver Display Size (in)','Centre Display Size (in)','Passenger Display Size (in)'
-  ], default:true },
-
-  { name:'Media', headers:[
-    'FM Radio','DAB','Satellite Radio','Streaming Media'
-  ]},
-
-  { name:'Navigation', headers:[
-    'Built-in Navigation','EV Routing','OTA Map Updates'
-  ]}
+  {
+    name: 'Displays',
+    headers: [
+      'Panoramic Display',
+      'Centre Screen Size  in  ',
+      'Passenger Display',
+      'Passenger Display Size  in  ',
+      'Rear Screens',
+      'Rear Screen Size  in   ',
+      'Cluster Type',
+      'Cluster Size  in   ',
+      'HUD'
+    ],
+    default:true
+  },
+  {
+    name:'Audio & Voice',
+    headers:['Premium Audio','# Speakers','Integrated Voice Assistant']
+  },
+  {
+    name:'Navigation & Mapping',
+    headers:['Integrated Nav','HD Maps','AR Nav','EV Route Planning']
+  },
+  {
+    name:'Connected Features',
+    headers:['WiFi Hotspot','Cellular Modem','OTA Updates','Connected Services Brand Name']
+  },
+  {
+    name:'Mobile Integration',
+    headers:['Apple CarPlay','Android Auto','Wireless Phone Charging']
+  },
+  {
+    name:'Streaming & Radio',
+    headers:['Google Built-In','Integrated Streaming Services','Broadcast Radio']
+  },
+  {
+    name:'USB & Ports',
+    headers:['# USB  A   ','# USB  C   ']
+  },
+  {
+    name:'Digital & Commerce',
+    headers:['In-Vehicle Commerce','Integrated App Store','Digital Key']
+  }
 ];
 
-/* ===== Header mappings ===== */
 const REQUIRED_TOP_HEADERS = {
   region:'Region',
   make:'Make',
@@ -143,67 +181,140 @@ const REQUIRED_TOP_HEADERS = {
 
 const REQUIRED_ADDITIONAL_HEADERS = {
   os:'Operating System',
-  centre:'Centre Screen Size (in)',
-  passenger:'Passenger Screen Size (in)'
+  centre:'Centre Screen Size  in  ',
+  passenger:'Passenger Display Size  in  '
 };
 
-/* ===== Scoped numeric filter ===== */
+function showError(msg){
+  const box = document.getElementById('errorBox');
+  box.style.display = 'block';
+  box.textContent = msg;
+}
+
+function parseCSV(text){
+  const rows = [], row=[];
+  let cur='', inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i], n=text[i+1];
+    if(c === '"' && inQuotes && n === '"'){ cur+='"'; i++; continue; }
+    if(c === '"'){ inQuotes=!inQuotes; continue; }
+    if(c === ',' && !inQuotes){ row.push(cur); cur=''; continue; }
+    if((c === '\n' || c === '\r') && !inQuotes){
+      if(c === '\r' && n === '\n') i++;
+      row.push(cur); rows.push(row.splice(0)); cur=''; continue;
+    }
+    cur+=c;
+  }
+  if(cur || row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+
 $.fn.dataTable.ext.search.push(function(settings,data){
   if(!table || settings.nTable !== table.table().node()) return true;
-
   for(const [col,st] of numericFilters){
     if(!table.column(col).visible()) continue;
-    const v=parseFloat(data[col]);
+    const v = parseFloat(String(data[col] ?? '').trim());
     if(isNaN(v) || v<st.min || v>st.max) return false;
   }
   return true;
 });
 
-/* ===== Load data ===== */
 async function loadData(){
-  const csv = await (await fetch(
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
-  )).text();
+  try{
+    const url='https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv';
+    const resp=await fetch(url);
+    if(!resp.ok) throw new Error('CSV fetch failed: HTTP '+resp.status);
+    const csv=await resp.text();
+    const rows=parseCSV(csv);
+    if(!rows.length) throw new Error('No CSV data found.');
 
-  const [headers,...data]=parseCSV(csv);
+    const [rawHeaders,...data]=rows;
+    const headers = rawHeaders.map((h,i)=>String(h ?? '').trim() || `Column ${i}`);
+    colIndex={};
+    headers.forEach((h,i)=>colIndex[h]=i);
 
-  headers.forEach((h,i)=>colIndex[h.trim()]=i);
+    document.getElementById('productTable').innerHTML =
+      `<thead><tr>${headers.map(h=>`<th>${escapeHtmlText(h)}</th>`).join('')}</tr></thead>
+       <tbody>${data.map(r=>`<tr>${headers.map((_,i)=>`<td>${escapeHtmlText(r[i] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody>`;
 
-  document.getElementById('productTable').innerHTML =
-    `<thead><tr>${headers.map(h=>`<th>${escapeHtmlText(h)}</th>`).join('')}</tr></thead>
-     <tbody>${data.map(r=>`<tr>${headers.map((_,i)=>`<td>${escapeHtmlText(r[i]??'')}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    table=$('#productTable').DataTable({ scrollX:true, pageLength:25 });
 
-  table=$('#productTable').DataTable({scrollX:true,pageLength:25});
+    buildDropdownForHeader(REQUIRED_TOP_HEADERS.region,'regionFilter');
+    buildDropdownForHeader(REQUIRED_TOP_HEADERS.make,'makeFilter');
+    buildDropdownForHeader(REQUIRED_TOP_HEADERS.vehicleSegment,'vehicleSegmentFilter');
+    buildDropdownForHeader(REQUIRED_TOP_HEADERS.priceSegment,'priceSegmentFilter');
 
-  Object.entries(REQUIRED_TOP_HEADERS).forEach(([_,h],i)=>{
-    buildDropdownForColumn(colIndex[h],Object.keys(REQUIRED_TOP_HEADERS)[i]+'Filter');
-  });
-
-  buildColumnSelector(headers);
-  setInitialVisibility();
-  renderAdditionalFilters();
+    buildColumnSelector(headers);
+    setInitialVisibility(headers);
+    renderAdditionalFilters();
+    table.draw(false);
+  }catch(err){
+    console.error(err);
+    showError(String(err && err.stack ? err.stack : err));
+  }
 }
 
-/* ===== Column selector ===== */
+function buildDropdownForHeader(header,containerId){
+  const idx=colIndex[header];
+  if(idx==null) return;
+  buildDropdownForColumn(idx,containerId);
+}
+
+function buildDropdownForColumn(col,id){
+  const container=document.getElementById(id);
+  if(!container||col==null) return;
+  container.dataset.col=col;
+  const box=container.querySelector('.checkbox-list');
+  const sel=container.querySelector('.select-all');
+  if(!box||!sel) return;
+
+  const values=[...new Set(table.column(col).data().toArray())]
+    .map(v=>String(v).trim()).filter(v=>v.length).sort();
+
+  box.innerHTML=values.map(v=>`<label><input type="checkbox" value="${escapeHtmlAttr(v)}" checked>${escapeHtmlText(v)}</label>`).join('');
+
+  sel.onchange=()=>{ box.querySelectorAll('input').forEach(cb=>cb.checked=sel.checked); applyDropdownFilter(id); };
+  box.querySelectorAll('input').forEach(cb=>cb.onchange=()=>applyDropdownFilter(id));
+}
+
+function applyDropdownFilter(id){
+  const container=document.getElementById(id);
+  if(!container) return;
+  const col=Number(container.dataset.col);
+  const box=container.querySelector('.checkbox-list');
+  if(!box||Number.isNaN(col)) return;
+
+  const vals=[...box.querySelectorAll('input[type="checkbox"]:checked')].map(x=>escapeRegex(x.value));
+  const regex=vals.length?`^(${vals.join('|')})$`:'(?!)';
+  table.column(col).search(regex,true,false).draw();
+}
+
 function buildColumnSelector(headers){
   const root=document.getElementById('columnSelector');
+  const groupsResolved=COLUMN_GROUPS.map(g=>{
+    const cols=(g.headers||[]).map(h=>colIndex[h]).filter(i=>i!=null);
+    return {...g,cols};
+  });
 
   root.innerHTML=`<h3>Select to Display</h3><div class="col-groups">${
-    COLUMN_GROUPS.map(g=>{
-      const cols=g.headers.map(h=>colIndex[h]).filter(i=>i!=null);
-      return `<div class="col-group">
-        <div class="group-head"><input type="checkbox" class="group-toggle" ${g.default?'checked':''}> ${g.name}</div>
+    groupsResolved.map(g=>`
+      <div class="col-group">
+        <div class="group-head">
+          <input type="checkbox" class="group-toggle" ${g.default?'checked':''}> ${escapeHtmlText(g.name)}
+        </div>
         <div class="cols">${
-          cols.map(i=>`<label><input type="checkbox" class="col-toggle" data-i="${i}" ${g.default?'checked':''}>${escapeHtmlText(headers[i])}</label>`).join('')
+          g.cols.length
+            ? g.cols.map(i=>`<label><input type="checkbox" class="col-toggle" data-i="${i}" ${g.default?'checked':''}>${escapeHtmlText(headers[i])}</label>`).join('')
+            : `<em style="opacity:0.75;">(no matching columns)</em>`
         }</div>
-      </div>`;
-    }).join('')
+      </div>
+    `).join('')
   }</div>`;
 
   root.onchange=e=>{
     if(e.target.classList.contains('group-toggle')){
-      const g=e.target.closest('.col-group');
-      g.querySelectorAll('.col-toggle').forEach(cb=>{
+      const group=e.target.closest('.col-group');
+      group.querySelectorAll('.col-toggle').forEach(cb=>{
         cb.checked=e.target.checked;
         table.column(+cb.dataset.i).visible(cb.checked,false);
       });
@@ -216,8 +327,7 @@ function buildColumnSelector(headers){
   };
 }
 
-/* ===== Initial visibility ===== */
-function setInitialVisibility(){
+function setInitialVisibility(headers){
   table.columns().visible(false,false);
 
   Object.values(REQUIRED_TOP_HEADERS)
@@ -225,49 +335,38 @@ function setInitialVisibility(){
     .forEach(i=>table.column(i).visible(true,false));
 
   COLUMN_GROUPS.filter(g=>g.default)
-    .flatMap(g=>g.headers.map(h=>colIndex[h]))
-    .filter(i=>i!=null)
+    .flatMap(g=>g.headers.map(h=>colIndex[h]).filter(i=>i!=null))
     .forEach(i=>table.column(i).visible(true,false));
 
   table.columns.adjust().draw(false);
 }
 
-/* ===== Dropdown filter ===== */
-function buildDropdownForColumn(col,id){
-  if(col==null) return;
-  const root=document.getElementById(id);
-  root.dataset.col=col;
-  const box=root.querySelector('.checkbox-list');
-  const sel=root.querySelector('.select-all');
-
-  const vals=[...new Set(table.column(col).data().toArray())].filter(v=>v);
-  box.innerHTML=vals.map(v=>`<label><input type="checkbox" value="${escapeHtmlAttr(v)}" checked>${escapeHtmlText(v)}</label>`).join('');
-
-  sel.onchange=()=>{ box.querySelectorAll('input').forEach(cb=>cb.checked=sel.checked); applyDropdownFilter(id); };
-  box.querySelectorAll('input').forEach(cb=>cb.onchange=()=>applyDropdownFilter(id));
-}
-
-function applyDropdownFilter(id){
-  const c=document.getElementById(id);
-  const col=+c.dataset.col;
-  const vals=[...c.querySelectorAll('input[type=checkbox]:checked')].map(x=>escapeRegex(x.value));
-  const r=vals.length?`^(${vals.join('|')})$`:'(?!)';
-  table.column(col).search(r,true,false).draw();
-}
-
-/* ===== Additional numeric filters ===== */
 function renderAdditionalFilters(){
   const root=document.getElementById('dynamicFilters');
   root.innerHTML=''; numericFilters.clear();
 
+  const os=colIndex[REQUIRED_ADDITIONAL_HEADERS.os];
+  if(os!=null && table.column(os).visible()){
+    const d=document.createElement('div');
+    d.id='osFilter'; d.className='dropdown-filter open';
+    d.innerHTML=`
+      <div class="dropdown-btn">Operating System</div>
+      <div class="dropdown-content" style="display:block">
+        <label><input type="checkbox" class="select-all" checked> Select All</label>
+        <div class="checkbox-list"></div>
+      </div>`;
+    root.appendChild(d);
+    buildDropdownForColumn(os,'osFilter');
+  }
+
   addNumericFilter('Centre Screen Size (in)',colIndex[REQUIRED_ADDITIONAL_HEADERS.centre],0.1);
-  addNumericFilter('Passenger Screen Size (in)',colIndex[REQUIRED_ADDITIONAL_HEADERS.passenger],0.1);
+  addNumericFilter('Passenger Display Size (in)',colIndex[REQUIRED_ADDITIONAL_HEADERS.passenger],0.1);
 }
 
 function addNumericFilter(label,col,step){
-  if(col==null||!table.column(col).visible()) return;
+  if(col==null||!table.column(col).visible()){ numericFilters.delete(col); return; }
 
-  const vals=table.column(col).data().toArray().map(v=>+v).filter(v=>!isNaN(v));
+  const vals=table.column(col).data().toArray().map(v=>parseFloat(String(v).trim())).filter(v=>!isNaN(v));
   if(!vals.length) return;
 
   const min=Math.min(...vals), max=Math.max(...vals);
@@ -275,17 +374,24 @@ function addNumericFilter(label,col,step){
 
   const d=document.createElement('div');
   d.className='range-filter';
-  d.innerHTML=`<strong>${label}</strong>
+  d.innerHTML=`
+    <strong>${escapeHtmlText(label)}</strong>
     <input type="range" min="${min}" max="${max}" step="${step}" value="${min}">
     <input type="range" min="${min}" max="${max}" step="${step}" value="${max}">`;
 
   const [a,b]=d.querySelectorAll('input');
   a.oninput=b.oninput=()=>{ numericFilters.set(col,{min:+Math.min(a.value,b.value),max:+Math.max(a.value,b.value)}); table.draw(); };
-  root.appendChild(d);
+  document.getElementById('dynamicFilters').appendChild(d);
 }
 
-/* ===== Utilities ===== */
-function downloadView(){ /* unchanged */ }
+function downloadView(){
+  const cols=table.columns(':visible').indexes().toArray();
+  const rows=table.rows({search:'applied'}).data().toArray();
+  const out=[cols.map(i=>table.column(i).header().textContent).join(',')];
+  rows.forEach(r=>out.push(cols.map(i=>`"${String(r[i]??'').replace(/"/g,'""')}"`).join(',')));
+  const blob=new Blob([out.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='feature-audit-view.csv'; a.click();
+}
 function clearAllFilters(){ location.reload(); }
 
 document.addEventListener('click',e=>{
@@ -294,9 +400,9 @@ document.addEventListener('click',e=>{
   document.querySelectorAll('.dropdown-filter').forEach(d=>d.classList.remove('open'));
 });
 
-function escapeRegex(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
-function escapeHtmlText(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-function escapeHtmlAttr(s){return escapeHtmlText(s);}
+function escapeRegex(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+function escapeHtmlText(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeHtmlAttr(s){ return escapeHtmlText(s); }
 
 loadData();
 </script>
