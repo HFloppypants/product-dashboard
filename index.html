@@ -13,15 +13,13 @@ h2 { font-size:18px; margin-bottom:12px; }
 h3 { font-size:15px; margin-bottom:10px; }
 
 .filters { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
-
 .dropdown-filter { position:relative; width:220px; }
 .dropdown-btn { background:#f1f1f1; padding:8px; border:1px solid #ccc; cursor:pointer; }
 
-.dropdown-content {
+.dropdown-content{
   display:none;
   position:absolute;
-  top:100%;
-  left:0; right:0;
+  top:100%; left:0; right:0;
   background:#fff;
   border:1px solid #ccc;
   z-index:1000;
@@ -29,10 +27,9 @@ h3 { font-size:15px; margin-bottom:10px; }
   overflow-y:auto;
   padding:8px;
 }
-
 .dropdown-filter.open .dropdown-content { display:block; }
 
-.range-filter {
+.range-filter{
   display:flex;
   flex-direction:column;
   gap:6px;
@@ -44,13 +41,7 @@ h3 { font-size:15px; margin-bottom:10px; }
 }
 
 .col-panel { border:1px solid #ccc; padding:12px; margin-top:12px; }
-
-.col-groups {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-  gap:12px;
-}
-
+.col-groups{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
 .col-group { border:1px solid #e0e0e0; padding:10px; background:#fafafa; }
 .group-head { font-weight:600; margin-bottom:8px; }
 .cols { padding-left:18px; display:flex; flex-direction:column; gap:6px; }
@@ -116,63 +107,52 @@ table { width:100%; }
 
 <script>
 let table;
+let colIndex = {};
+const numericFilters = new Map();
 
-/* ===== CSV PARSER (FIXED) ===== */
+/* ===== SAFE CSV PARSER ===== */
 function parseCSV(text){
   const rows=[], row=[];
   let cur='', inQuotes=false;
-
   for(let i=0;i<text.length;i++){
     const c=text[i], n=text[i+1];
-
     if(c === '"' && inQuotes && n === '"'){ cur+='"'; i++; continue; }
     if(c === '"'){ inQuotes=!inQuotes; continue; }
-
-    if(c === ',' && !inQuotes){
-      row.push(cur); cur=''; continue;
-    }
-
+    if(c === ',' && !inQuotes){ row.push(cur); cur=''; continue; }
     if((c === '\n' || c === '\r') && !inQuotes){
       if(cur || row.length){
-        row.push(cur);
-        rows.push(row.splice(0));
-        cur='';
+        row.push(cur); rows.push(row.splice(0)); cur='';
       }
       continue;
     }
-
     cur+=c;
   }
-  if(cur || row.length){
-    row.push(cur);
-    rows.push(row);
-  }
+  if(cur || row.length){ row.push(cur); rows.push(row); }
   return rows;
 }
 
-/* ===== COLUMN INDEXING ===== */
-function excelColToIndex(col){
-  return [...col].reduce((n,l)=>n*26+l.charCodeAt()-64,0)-1;
-}
-
-const REGION_COL=0, MAKE_COL=1, VEHICLE_SEG_COL=3, PRICE_SEG_COL=4;
-const OPERATING_SYSTEM_COL=excelColToIndex('F');
-const CENTRE_COL=excelColToIndex('I');
-const PASSENGER_COL=excelColToIndex('K');
-
-/* ===== COLUMN GROUPS ===== */
-const COLUMN_GROUPS=[
-  {name:'Displays',letters:['H','I','J','K','L','M','N','O','P'],default:true},
-  {name:'Media',letters:['Q','R','S','T']},
-  {name:'Phone/Device',letters:['U','V','X','Y','Z']},
-  {name:'Navigation',letters:['AB','AC','AD','AE']},
-  {name:'Connectivity',letters:['W','AA','AF','AG','AH','AK']},
-  {name:'System',letters:['F','G','AI','AJ']}
+/* ===== COLUMN GROUPS (HEADER-BASED) ===== */
+const COLUMN_GROUPS = [
+  {
+    name:'Displays',
+    default:true,
+    headers:[
+      'Centre Screen Size (in)',
+      'Passenger Screen Size (in)',
+      'Rear Screen Size (in)',
+      'Instrument Cluster Size (in)'
+    ]
+  },
+  {
+    name:'System',
+    headers:[
+      'Operating System',
+      'OTA Updates'
+    ]
+  }
 ];
 
-const numericFilters=new Map();
-
-/* ===== DATATABLE FILTER EXTENSION ===== */
+/* ===== DATATABLE EXT FILTER ===== */
 $.fn.dataTable.ext.search.push((settings,data)=>{
   for(const [col,st] of numericFilters){
     if(!table.column(col).visible()) continue;
@@ -184,12 +164,14 @@ $.fn.dataTable.ext.search.push((settings,data)=>{
 
 /* ===== LOAD DATA ===== */
 async function loadData(){
-  const csv=await (await fetch(
+  const csv = await (await fetch(
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRmRu1_HWep8KGgPJPAITrGn9ljdlTtFjrx85qAAzeiSZfC9ecKX8T0aSE9rt6vYLdZZ1ZTW-VpJyHg/pub?output=csv'
   )).text();
 
   const rows=parseCSV(csv);
   const [headers,...data]=rows;
+
+  headers.forEach((h,i)=>colIndex[h.trim()] = i);
 
   document.getElementById('productTable').innerHTML=
     `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
@@ -197,10 +179,10 @@ async function loadData(){
 
   table=$('#productTable').DataTable({scrollX:true,pageLength:25});
 
-  buildDropdown(REGION_COL,'regionFilter');
-  buildDropdown(MAKE_COL,'makeFilter');
-  buildDropdown(VEHICLE_SEG_COL,'vehicleSegmentFilter');
-  buildDropdown(PRICE_SEG_COL,'priceSegmentFilter');
+  buildDropdown(colIndex['Region'],'regionFilter');
+  buildDropdown(colIndex['Make'],'makeFilter');
+  buildDropdown(colIndex['Vehicle Segment'],'vehicleSegmentFilter');
+  buildDropdown(colIndex['Price Segment'],'priceSegmentFilter');
 
   buildColumnSelector(headers);
   applyDefaultVisibility();
@@ -208,30 +190,30 @@ async function loadData(){
   table.draw(false);
 }
 
-/* ===== TOP DROPDOWNS ===== */
+/* ===== DROPDOWNS ===== */
 function buildDropdown(col,id){
   const box=document.querySelector(`#${id} .checkbox-list`);
-  if(!box) return;
-
+  if(!box || col==null) return;
   const values=[...new Set(table.column(col).data().toArray())].sort();
   box.innerHTML='';
   values.forEach(v=>{
     box.innerHTML+=`<label><input type="checkbox" value="${v}" checked>${v}</label>`;
   });
-
-  document.querySelectorAll(`#${id} input`).forEach(i=>{
-    i.onchange=applyTopFilters;
-  });
+  document.querySelectorAll(`#${id} input`).forEach(i=>i.onchange=applyTopFilters);
 }
 
 function applyTopFilters(){
-  [[REGION_COL,'regionFilter'],[MAKE_COL,'makeFilter'],
-   [VEHICLE_SEG_COL,'vehicleSegmentFilter'],[PRICE_SEG_COL,'priceSegmentFilter']]
-  .forEach(([c,id])=>{
+  [
+    ['Region','regionFilter'],
+    ['Make','makeFilter'],
+    ['Vehicle Segment','vehicleSegmentFilter'],
+    ['Price Segment','priceSegmentFilter']
+  ].forEach(([h,id])=>{
+    const col=colIndex[h];
+    if(col==null) return;
     const vals=[...document.querySelectorAll(`#${id} input:checked`)]
-      .filter(v=>v.value)
-      .map(v=>v.value);
-    table.column(c).search(vals.join('|'),true,false);
+      .filter(v=>v.value).map(v=>v.value);
+    table.column(col).search(vals.join('|'),true,false);
   });
   table.draw();
 }
@@ -246,9 +228,11 @@ function buildColumnSelector(headers){
           <input type="checkbox" class="group-toggle" ${g.default?'checked':''}> ${g.name}
         </div>
         <div class="cols">
-          ${g.letters.map(l=>{
-            const i=excelColToIndex(l);
-            return `<label><input type="checkbox" class="col-toggle" data-i="${i}" ${g.default?'checked':''}>${headers[i]}</label>`;
+          ${g.headers.map(h=>{
+            const i=colIndex[h];
+            return i!=null
+              ? `<label><input type="checkbox" class="col-toggle" data-i="${i}" ${g.default?'checked':''}>${h}</label>`
+              : '';
           }).join('')}
         </div>
       </div>`).join('')
@@ -271,8 +255,9 @@ function buildColumnSelector(headers){
 
 function applyDefaultVisibility(){
   COLUMN_GROUPS.forEach(g=>{
-    g.letters.forEach(l=>{
-      table.column(excelColToIndex(l)).visible(!!g.default,false);
+    g.headers.forEach(h=>{
+      const i=colIndex[h];
+      if(i!=null) table.column(i).visible(!!g.default,false);
     });
   });
 }
@@ -283,9 +268,9 @@ function renderAdditionalFilters(){
   root.innerHTML='';
   numericFilters.clear();
 
-  if(table.column(OPERATING_SYSTEM_COL).visible()){
+  const osCol=colIndex['Operating System'];
+  if(osCol!=null && table.column(osCol).visible()){
     const d=document.createElement('div');
-    d.id='osFilter';
     d.className='dropdown-filter open';
     d.innerHTML=`
       <div class="dropdown-btn">Operating System</div>
@@ -294,16 +279,16 @@ function renderAdditionalFilters(){
         <div class="checkbox-list"></div>
       </div>`;
     root.appendChild(d);
-    buildDropdown(OPERATING_SYSTEM_COL,'osFilter');
+    d.id='osFilter';
+    buildDropdown(osCol,'osFilter');
   }
 
-  addNumericFilter('Centre Screen Size (in)',CENTRE_COL,0.1);
-  addNumericFilter('Passenger Screen Size (in)',PASSENGER_COL,0.1);
+  addNumericFilter('Centre Screen Size (in)', colIndex['Centre Screen Size (in)'], 0.1);
+  addNumericFilter('Passenger Screen Size (in)', colIndex['Passenger Screen Size (in)'], 0.1);
 }
 
 function addNumericFilter(label,col,step){
-  if(!table.column(col).visible()) return;
-
+  if(col==null || !table.column(col).visible()) return;
   const vals=table.column(col).data().toArray().map(v=>parseFloat(v)).filter(v=>!isNaN(v));
   if(!vals.length) return;
 
@@ -325,7 +310,7 @@ function addNumericFilter(label,col,step){
   document.getElementById('dynamicFilters').appendChild(d);
 }
 
-/* ===== EXPORT / RESET ===== */
+/* ===== UTIL ===== */
 function downloadView(){
   const cols=table.columns(':visible').indexes().toArray();
   const rows=table.rows({search:'applied'}).data().toArray();
