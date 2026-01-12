@@ -287,11 +287,12 @@ table.dataTable thead th {
 
 <body>
 
-<h2>Vehicle Filters</h2>
-
 <div id="errorBox"></div>
 
-<div class="filters">
+<div id="columnSelector" class="col-panel"></div>
+   
+<div class="col-panel">
+  <h3>Vehicle Filters</h3>
   <div id="regionFilter" class="dropdown-filter">
     <div class="dropdown-btn">Region</div>
     <div class="dropdown-content">
@@ -323,16 +324,16 @@ table.dataTable thead th {
       <div class="checkbox-list"></div>
     </div>
   </div>
-
-  <button onclick="clearAllFilters()">Clear All</button>
-   <button class="btn-primary" onclick="downloadView()">Download Current View</button>
 </div>
-
-<div id="columnSelector" class="col-panel"></div>
 
 <div class="col-panel">
   <h3>Filters for Selected Columns</h3>
   <div id="dynamicFilters"></div>
+</div>
+
+<div class="filters" style="justify-content: flex-end; margin-bottom: 12px;">
+  <button class="btn-secondary" onclick="clearAllFilters()">Clear All Filters</button>
+  <button class="btn-primary" onclick="downloadView()">Download Current View</button>
 </div>
 
 <table id="productTable" class="display"></table>
