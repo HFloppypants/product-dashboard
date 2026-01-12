@@ -476,22 +476,67 @@ function buildDropdownForHeader(header,containerId){
   buildDropdownForColumn(idx,containerId);
 }
 
-function buildDropdownForColumn(col,id){
-  const container=document.getElementById(id);
-  if(!container||col==null) return;
-  container.dataset.col=col;
-  const box=container.querySelector('.checkbox-list');
-  const sel=container.querySelector('.select-all');
-  if(!box||!sel) return;
+function buildDropdownForColumn(col, id) {
+  const container = document.getElementById(id);
+  if (!container || col == null) return;
 
-  const values=[...new Set(table.column(col).data().toArray())]
-    .map(v=>String(v).trim()).filter(v=>v.length).sort();
+  container.dataset.col = col;
 
-  box.innerHTML=values.map(v=>`<label><input type="checkbox" value="${escapeHtmlAttr(v)}" checked>${escapeHtmlText(v)}</label>`).join('');
+  const box = container.querySelector('.checkbox-list');
+  const selectAll = container.querySelector('.select-all');
+  if (!box || !selectAll) return;
 
-  sel.onchange=()=>{ box.querySelectorAll('input').forEach(cb=>cb.checked=sel.checked); applyDropdownFilter(id); };
-  box.querySelectorAll('input').forEach(cb=>cb.onchange=()=>applyDropdownFilter(id));
+  const values = [...new Set(table.column(col).data().toArray())]
+    .map(v => String(v).trim())
+    .filter(v => v.length)
+    .sort();
+
+  box.innerHTML = values.map(v =>
+    `<label>
+      <input type="checkbox" value="${escapeHtmlAttr(v)}" checked>
+      ${escapeHtmlText(v)}
+    </label>`
+  ).join('');
+
+  const optionCheckboxes = () =>
+    [...box.querySelectorAll('input[type="checkbox"]')];
+
+  function updateSelectAllState() {
+    const boxes = optionCheckboxes();
+    const checked = boxes.filter(cb => cb.checked).length;
+
+    if (checked === boxes.length) {
+      selectAll.checked = true;
+      selectAll.indeterminate = false;
+    } else if (checked === 0) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+    } else {
+      selectAll.checked = false;
+      selectAll.indeterminate = true;
+    }
+  }
+
+  // Select All → toggle everything
+  selectAll.onchange = () => {
+    const checked = selectAll.checked;
+    optionCheckboxes().forEach(cb => cb.checked = checked);
+    selectAll.indeterminate = false;
+    applyDropdownFilter(id);
+  };
+
+  // Individual checkbox change
+  optionCheckboxes().forEach(cb => {
+    cb.onchange = () => {
+      updateSelectAllState();
+      applyDropdownFilter(id);
+    };
+  });
+
+  // Initial state
+  updateSelectAllState();
 }
+
 
 function applyDropdownFilter(id){
   const container=document.getElementById(id);
