@@ -706,6 +706,26 @@ function escapeHtmlAttr(s){ return escapeHtmlText(s); }
 
 loadData();
 </script>
+<script>
+function sendHeight() {
+  const height = document.documentElement.scrollHeight;
+  window.parent.postMessage(
+    { type: 'iframe-height', height },
+    '*'
+  );
+}
+
+// Send height on load
+window.addEventListener('load', sendHeight);
+
+// Send height on resize
+window.addEventListener('resize', sendHeight);
+
+// Send height after DataTables redraws
+if (window.jQuery) {
+  jQuery(document).on('draw.dt', sendHeight);
+}
+</script>
 
 </body>
 </html>
