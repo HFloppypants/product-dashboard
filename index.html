@@ -581,11 +581,28 @@ function downloadView(){
 }
 function clearAllFilters(){ location.reload(); }
 
-document.addEventListener('click',e=>{
-  const b=e.target.closest('.dropdown-btn');
-  if(b){ b.parentElement.classList.toggle('open'); return; }
-  document.querySelectorAll('.dropdown-filter').forEach(d=>d.classList.remove('open'));
+document.addEventListener('click', e => {
+  const dropdown = e.target.closest('.dropdown-filter');
+  const button = e.target.closest('.dropdown-btn');
+
+  // Click on a dropdown button: toggle that dropdown, close others
+  if (button) {
+    document.querySelectorAll('.dropdown-filter').forEach(d => {
+      if (d !== button.parentElement) d.classList.remove('open');
+    });
+    button.parentElement.classList.toggle('open');
+    return;
+  }
+
+  // Click inside an open dropdown (checkboxes, labels, scrollbars): do nothing
+  if (dropdown) {
+    return;
+  }
+
+  // Click outside all dropdowns: close everything
+  document.querySelectorAll('.dropdown-filter').forEach(d => d.classList.remove('open'));
 });
+
 
 function escapeRegex(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 function escapeHtmlText(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
