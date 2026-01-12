@@ -8,24 +8,45 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
 
 <style>
-/* ===== Base ===== */
+/* ======================================================
+   Design Tokens
+   ====================================================== */
+:root {
+  --uds-primary: #005c5c;
+  --uds-primary-dark: #004747;
+  --uds-secondary: #02c256;
+  --uds-secondary-dark: #02a94c;
+  --uds-text-primary: #0c2c56;
+  --uds-text-secondary: #4a5a6a;
+  --uds-border-light: #c4ced4;
+  --uds-bg-soft: #fafafa;
+}
+
+/* ======================================================
+   Base
+   ====================================================== */
 body {
-  font-family: sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
   padding: 20px;
+  color: var(--uds-text-primary);
 }
 
 h2 {
   font-size: 18px;
+  font-weight: 600;
   margin-bottom: 12px;
 }
 
 h3 {
   font-size: 15px;
+  font-weight: 600;
   margin-bottom: 10px;
 }
 
-/* ===== Top Filters ===== */
+/* ======================================================
+   Top Filters
+   ====================================================== */
 .filters {
   display: flex;
   gap: 16px;
@@ -39,10 +60,13 @@ h3 {
 }
 
 .dropdown-btn {
-  background: #f1f1f1;
+  background: #ffffff;
   padding: 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--uds-border-light);
+  border-radius: 10px;
   cursor: pointer;
+  font-weight: 500;
+  color: var(--uds-text-primary);
 }
 
 .dropdown-content {
@@ -51,8 +75,9 @@ h3 {
   top: 100%;
   left: 0;
   right: 0;
-  background: #fff;
-  border: 1px solid #ccc;
+  background: #ffffff;
+  border: 1px solid var(--uds-border-light);
+  border-radius: 10px;
   z-index: 1000;
   max-height: 240px;
   overflow-y: auto;
@@ -63,26 +88,57 @@ h3 {
   display: block;
 }
 
-/* ===== Range Filters ===== */
+/* Checkbox accent */
+input[type="checkbox"] {
+  accent-color: var(--uds-primary);
+}
+
+/* ======================================================
+   Range Filters
+   ====================================================== */
 .range-filter {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px;
-  border: 1px solid #ccc;
-  background: #fafafa;
+  border: 1px solid var(--uds-border-light);
+  border-radius: 10px;
+  background: var(--uds-bg-soft);
   max-width: 420px;
 }
 
-/* ===== Panels ===== */
-.col-panel {
-  border: 1px solid #ccc;
-  padding: 12px;
-  margin-top: 12px;
-  margin-bottom: 24px;
+input[type="range"] {
+  accent-color: var(--uds-primary);
 }
 
-/* ===== Column Group Selector ===== */
+.range-values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--uds-text-secondary);
+  margin-bottom: 4px;
+}
+
+.range-values .current-val {
+  font-weight: 600;
+  color: var(--uds-text-primary);
+}
+
+/* ======================================================
+   Panels
+   ====================================================== */
+.col-panel {
+  border: 1px solid var(--uds-border-light);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 12px;
+  margin-bottom: 24px;
+  background: #ffffff;
+}
+
+/* ======================================================
+   Column Group Selector
+   ====================================================== */
 .col-groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -90,9 +146,10 @@ h3 {
 }
 
 .col-group {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--uds-border-light);
+  border-radius: 10px;
   padding: 10px;
-  background: #fafafa;
+  background: var(--uds-bg-soft);
 }
 
 .group-head {
@@ -107,26 +164,72 @@ h3 {
   gap: 6px;
 }
 
-/* ===== Form Elements ===== */
+/* ======================================================
+   Form Elements
+   ====================================================== */
 label {
   display: flex;
   gap: 6px;
   cursor: pointer;
+  font-size: 13px;
 }
 
+/* Buttons – base */
 button {
-  padding: 8px 10px;
-  border: 1px solid #ccc;
-  background: #f1f1f1;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
   cursor: pointer;
+  border: none;
+  transition: background-color 0.15s ease;
 }
 
-/* ===== Table ===== */
+/* Primary action (Download, Sign in, Export) */
+.btn-primary,
+button.primary {
+  background: var(--uds-primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover,
+button.primary:hover {
+  background: var(--uds-primary-dark);
+}
+
+/* Secondary / intermediate actions (Clear, Reset) */
+.btn-secondary,
+button.secondary {
+  background: var(--uds-secondary);
+  color: #ffffff;
+}
+
+.btn-secondary:hover,
+button.secondary:hover {
+  background: var(--uds-secondary-dark);
+}
+
+/* Neutral fallback */
+button:not(.primary):not(.secondary) {
+  background: var(--uds-border-light);
+  color: var(--uds-text-primary);
+}
+
+/* ======================================================
+   Table
+   ====================================================== */
 table {
   width: 100%;
 }
 
-/* ===== Error Box ===== */
+table.dataTable thead th {
+  font-weight: 600;
+  color: var(--uds-text-primary);
+}
+
+/* ======================================================
+   Error Box
+   ====================================================== */
 #errorBox {
   display: none;
   border: 1px solid #d33;
@@ -137,7 +240,9 @@ table {
   font-family: monospace;
 }
 
-/* ===== DataTables Fixes ===== */
+/* ======================================================
+   DataTables Fixes
+   ====================================================== */
 
 /* scrollX header/body width sync */
 .dataTables_scrollHeadInner,
@@ -155,29 +260,19 @@ table {
   margin-bottom: 36px;
 }
 
-/* ===== Additional Filters Layout ===== */
+/* ======================================================
+   Additional Filters (Dynamic)
+   ====================================================== */
 #dynamicFilters {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
   align-items: start;
 }
-  
-.range-values {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  opacity: 0.75;
-  margin-bottom: 4px;
-}
 
-.range-values .current-val {
-  font-weight: 600;
-}
-
-/* Secondary visual treatment for additional filters */
+/* Secondary visual treatment */
 #dynamicFilters .dropdown-btn {
-  background: #fafafa;
+  background: var(--uds-bg-soft);
   font-weight: 600;
 }
 
@@ -185,6 +280,7 @@ table {
   max-height: 220px;
 }
 </style>
+
 </head>
 
 <body>
