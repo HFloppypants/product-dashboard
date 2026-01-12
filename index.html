@@ -67,6 +67,10 @@ table { width:100%; }
 .dataTables_scrollBody table {
   width: 100% !important;
 }
+/* Space between Additional Filters and DataTables controls */
+.col-panel + .dataTables_wrapper {
+  margin-top: 24px;
+}
 }
 </style>
 </head>
@@ -172,6 +176,7 @@ const COLUMN_GROUPS = [
 const REQUIRED_TOP_HEADERS = {
   region:'Region',
   make:'Make',
+  model:'Model',
   vehicleSegment:'Vehicle Segment',
   priceSegment:'Price Segment'
 };
