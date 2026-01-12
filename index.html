@@ -162,6 +162,18 @@ table {
   gap: 16px;
   align-items: start;
 }
+  
+.range-values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  opacity: 0.75;
+  margin-bottom: 4px;
+}
+
+.range-values .current-val {
+  font-weight: 600;
+}
 
 /* Secondary visual treatment for additional filters */
 #dynamicFilters .dropdown-btn {
@@ -506,26 +518,58 @@ function renderAdditionalFilters(){
 }
 
 
-function addNumericFilter(label,col,step){
-  if(col==null||!table.column(col).visible()){ numericFilters.delete(col); return; }
+function addNumericFilter(label, col, step){
+  if (col == null || !table.column(col).visible()) {
+    numericFilters.delete(col);
+    return;
+  }
 
-  const vals=table.column(col).data().toArray().map(v=>parseFloat(String(v).trim())).filter(v=>!isNaN(v));
-  if(!vals.length) return;
+  const vals = table.column(col).data().toArray()
+    .map(v => parseFloat(String(v).trim()))
+    .filter(v => !isNaN(v));
 
-  const min=Math.min(...vals), max=Math.max(...vals);
-  numericFilters.set(col,{min,max});
+  if (!vals.length) return;
 
-  const d=document.createElement('div');
-  d.className='range-filter';
-  d.innerHTML=`
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+
+  numericFilters.set(col, { min, max });
+
+  const d = document.createElement('div');
+  d.className = 'range-filter';
+  d.innerHTML = `
     <strong>${escapeHtmlText(label)}</strong>
-    <input type="range" min="${min}" max="${max}" step="${step}" value="${min}">
-    <input type="range" min="${min}" max="${max}" step="${step}" value="${max}">`;
 
-  const [a,b]=d.querySelectorAll('input');
-  a.oninput=b.oninput=()=>{ numericFilters.set(col,{min:+Math.min(a.value,b.value),max:+Math.max(a.value,b.value)}); table.draw(); };
+    <div class="range-values">
+      <span class="min-val">${min}</span>
+      <span class="current-val">${min} – ${max}</span>
+      <span class="max-val">${max}</span>
+    </div>
+
+    <input type="range" min="${min}" max="${max}" step="${step}" value="${min}">
+    <input type="range" min="${min}" max="${max}" step="${step}" value="${max}">
+  `;
+
+  const [minR, maxR] = d.querySelectorAll('input');
+  const current = d.querySelector('.current-val');
+
+  function update(){
+    const a = +minR.value;
+    const b = +maxR.value;
+    const lo = Math.min(a, b);
+    const hi = Math.max(a, b);
+
+    numericFilters.set(col, { min: lo, max: hi });
+    current.textContent = `${lo} – ${hi}`;
+    table.draw();
+  }
+
+  minR.oninput = update;
+  maxR.oninput = update;
+
   document.getElementById('dynamicFilters').appendChild(d);
 }
+
 
 function downloadView(){
   const cols=table.columns(':visible').indexes().toArray();
