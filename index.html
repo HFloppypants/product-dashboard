@@ -627,12 +627,21 @@ $(table.table().container())
 
 }
 
-  function isNumericColumn(colIndex) {
-  const vals = table.column(colIndex).data().toArray()
-    .map(v => parseFloat(String(v).trim()))
-    .filter(v => !isNaN(v));
-  return vals.length > 0;
+function isNumericColumn(colIndex) {
+  const raw = table.column(colIndex).data().toArray();
+
+  const parsed = raw
+    .map(v => String(v).trim())
+    .filter(v => v.length);
+
+  if (!parsed.length) return false;
+
+  const numericCount = parsed.filter(v => !isNaN(parseFloat(v))).length;
+
+  // Only treat as numeric if MOST values are numeric
+  return numericCount / parsed.length >= 0.8;
 }
+
 
 function renderAdditionalFilters(){
   const root = document.getElementById('dynamicFilters');
