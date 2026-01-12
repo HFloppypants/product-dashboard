@@ -75,6 +75,22 @@ table { width:100%; }
 .dataTables_filter {
   margin-bottom: 36px;
 }
+  /* --- Additional Filters layout --- */
+#dynamicFilters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+  /* Additional Filters should feel secondary */
+#dynamicFilters .dropdown-btn {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+#dynamicFilters .dropdown-content {
+  max-height: 220px;
+}
 }
 </style>
 </head>
@@ -396,10 +412,10 @@ function renderAdditionalFilters(){
     // Categorical → dropdown
     const d = document.createElement('div');
     d.id = `filter-${col}`;
-    d.className = 'dropdown-filter open';
+    d.className = 'dropdown-filter';
     d.innerHTML = `
-      <div class="dropdown-btn">${escapeHtmlText(header)}</div>
-      <div class="dropdown-content" style="display:block">
+        <div class="dropdown-btn">${escapeHtmlText(header)}</div>
+        <div class="dropdown-content">
         <label><input type="checkbox" class="select-all" checked> Select All</label>
         <div class="checkbox-list"></div>
       </div>`;
