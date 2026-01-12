@@ -125,7 +125,7 @@ table { width:100%; }
 <div id="columnSelector" class="col-panel"></div>
 
 <div class="col-panel">
-  <h3>Additional Filters</h3>
+  <h3>Filters for Selected Columns</h3>
   <div id="dynamicFilters"></div>
 </div>
 
@@ -242,7 +242,7 @@ async function loadData(){
       `<thead><tr>${headers.map(h=>`<th>${escapeHtmlText(h)}</th>`).join('')}</tr></thead>
        <tbody>${data.map(r=>`<tr>${headers.map((_,i)=>`<td>${escapeHtmlText(r[i] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody>`;
 
-    table=$('#productTable').DataTable({ scrollX:true, pageLength:50 });
+    table=$('#productTable').DataTable({ scrollX:true, pageLength:25 });
 
     buildDropdownForHeader(REQUIRED_TOP_HEADERS.region,'regionFilter');
     buildDropdownForHeader(REQUIRED_TOP_HEADERS.make,'makeFilter');
@@ -368,27 +368,47 @@ $(table.table().container())
 
 }
 
-function renderAdditionalFilters(){
-  const root=document.getElementById('dynamicFilters');
-  root.innerHTML=''; numericFilters.clear();
+  function isNumericColumn(colIndex) {
+  const vals = table.column(colIndex).data().toArray()
+    .map(v => parseFloat(String(v).trim()))
+    .filter(v => !isNaN(v));
+  return vals.length > 0;
+}
 
-  const os=colIndex[REQUIRED_ADDITIONAL_HEADERS.os];
-  if(os!=null && table.column(os).visible()){
-    const d=document.createElement('div');
-    d.id='osFilter'; d.className='dropdown-filter open';
-    d.innerHTML=`
-      <div class="dropdown-btn">Operating System</div>
+function renderAdditionalFilters(){
+  const root = document.getElementById('dynamicFilters');
+  root.innerHTML = '';
+  numericFilters.clear();
+
+  // Iterate over ALL visible columns
+  table.columns(':visible').indexes().toArray().forEach(col => {
+    const header = table.column(col).header().textContent;
+
+    // Skip identity columns (already filtered above)
+    if (Object.values(REQUIRED_TOP_HEADERS).includes(header)) return;
+
+    // Numeric → range slider
+    if (isNumericColumn(col)) {
+      addNumericFilter(header, col, 0.1);
+      return;
+    }
+
+    // Categorical → dropdown
+    const d = document.createElement('div');
+    d.id = `filter-${col}`;
+    d.className = 'dropdown-filter open';
+    d.innerHTML = `
+      <div class="dropdown-btn">${escapeHtmlText(header)}</div>
       <div class="dropdown-content" style="display:block">
         <label><input type="checkbox" class="select-all" checked> Select All</label>
         <div class="checkbox-list"></div>
       </div>`;
     root.appendChild(d);
-    buildDropdownForColumn(os,'osFilter');
-  }
 
-  addNumericFilter('Centre Screen Size (in)',colIndex[REQUIRED_ADDITIONAL_HEADERS.centre],0.1);
-  addNumericFilter('Passenger Display Size (in)',colIndex[REQUIRED_ADDITIONAL_HEADERS.passenger],0.1);
+    buildDropdownForColumn(col, d.id);
+  });
 }
+
 
 function addNumericFilter(label,col,step){
   if(col==null||!table.column(col).visible()){ numericFilters.delete(col); return; }
