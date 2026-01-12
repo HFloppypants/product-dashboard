@@ -73,7 +73,7 @@ table { width:100%; }
 }
   /* Space between DataTables search bar and table */
 .dataTables_filter {
-  margin-bottom: 24px;
+  margin-bottom: 36px;
 }
 }
 </style>
@@ -153,7 +153,6 @@ const COLUMN_GROUPS = [
       'Cluster Size (in)',
       'HUD'
     ],
-    default:true
   },
   {
     name:'Media',
@@ -243,7 +242,7 @@ async function loadData(){
       `<thead><tr>${headers.map(h=>`<th>${escapeHtmlText(h)}</th>`).join('')}</tr></thead>
        <tbody>${data.map(r=>`<tr>${headers.map((_,i)=>`<td>${escapeHtmlText(r[i] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody>`;
 
-    table=$('#productTable').DataTable({ scrollX:true, pageLength:25 });
+    table=$('#productTable').DataTable({ scrollX:true, pageLength:50 });
 
     buildDropdownForHeader(REQUIRED_TOP_HEADERS.region,'regionFilter');
     buildDropdownForHeader(REQUIRED_TOP_HEADERS.make,'makeFilter');
@@ -352,10 +351,6 @@ function setInitialVisibility(headers){
 
   Object.values(REQUIRED_TOP_HEADERS)
     .map(h=>colIndex[h]).filter(i=>i!=null)
-    .forEach(i=>table.column(i).visible(true,false));
-
-  COLUMN_GROUPS.filter(g=>g.default)
-    .flatMap(g=>g.headers.map(h=>colIndex[h]).filter(i=>i!=null))
     .forEach(i=>table.column(i).visible(true,false));
 
 table.columns.adjust();
