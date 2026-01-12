@@ -209,10 +209,12 @@ button.secondary:hover {
   background: var(--uds-secondary-dark);
 }
 
-/* Neutral fallback */
-button:not(.primary):not(.secondary) {
+/* Neutral fallback (only when no semantic button class is present) */
+button:not(.primary):not(.secondary):not(.btn-primary):not(.btn-secondary) {
   background: var(--uds-border-light);
   color: var(--uds-text-primary);
+}
+
 }
 
 /* ======================================================
